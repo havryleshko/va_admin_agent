@@ -29,6 +29,7 @@ if 'classified_emails' in st.session_state:
             if st.button("Queue", key=f"queue_{idx}"):
                 with open("queue_list.txt", "a") as f:
                     f.write(f"{email['sender']} | {email['subject']} | {email['draft_reply']}\n")
+                    
                     st.success("Queued.")
 
         with c3:
