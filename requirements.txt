@@ -1,0 +1,11 @@
+openai
+langchain
+langchain-community
+langchain-openai
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+streamlit
+python-dotenv
+email-validator
+tqdm
