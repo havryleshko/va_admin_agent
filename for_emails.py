@@ -63,11 +63,11 @@ def sending_email():
         choice = input('Send it, queue it or discard it?').strip().lower()
 
         if choice == 'send':
-            send_email(to=e['sender'], subject='RE: ' + e['subject'], text=['draft_reply '])
+            send_email(to=e['sender'], subject='RE: ' + e['subject'], text=e['draft_reply'])
             print('Email sent!')
         elif choice == 'queue':
             with open('queue_list.txt', 'a') as f:
-                f.write(f'{e['sender']} | {e['subject']} | {e['draft_reply']}')
+                f.write(f"{e['sender']} | {e['subject']} | {e['draft_reply']}")
             print('Queued!')
 
         elif choice == 'discard':
