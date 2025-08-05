@@ -12,10 +12,10 @@ if 'classified_emails' not in st.session_state: # checks if 'classified_emails' 
 if 'classified_emails' in st.session_state:
     for idx, email in enumerate(st.session_state.classified_emails): # looping through each email - idx is index 'enumerate' creates for each e
         st.markdown('---') #. visual separation
-        st.write(f'**Subject:** {email['subject']}') # for subject
-        st.write(f'**From:** {email['sender']}') # from
-        st.write(f'**Category:** {email['category']}') # category
-        st.write(f'**Snippet:** {email['snippet']}') # snippet
+        st.write(f"**Subject:** {email['subject']}") # for subject
+        st.write(f"**From:** {email['sender']}") # from
+        st.write(f"**Category:** {email['category']}") # category
+        st.write(f"**Snippet:** {email['snippet']}") # snippet
 
     # creating texting area 
         edited = st.text_area(label='Edit draft reply', value=email['draft_reply'], key=f'reply_{idx}')
