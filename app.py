@@ -18,7 +18,7 @@ if 'classified_emails' in st.session_state:
         st.write(f"**Snippet:** {email['snippet']}") # snippet
 
     # creating texting area 
-        edited = st.text_area(label='Edit draft reply', value=email['draft_reply'], key=f'reply_{idx}')
+        edited = st.text_area(label="Edit draft reply", value=email["draft_reply"], key=f"reply_{idx}")
         c1, c2, c3 = st.columns(3) # columns for email buttons
         with c1:
             if st.button('Send', key=f'send_{idx}'):
@@ -26,13 +26,13 @@ if 'classified_emails' in st.session_state:
                 st.success('Email sent!')
 
         with c2:
-            if st.button('Queue', key=f'queue_{idx}'):
-                with open('queue_list.txt', 'a') as f:
-                    f.write(f"{email['sender']} | {email['subject']} | {email['draft_reply']}")
-                    st.success('Queued.')
+            if st.button("Queue", key=f"queue_{idx}"):
+                with open("queue_list.txt", "a") as f:
+                    f.write(f"{email['sender']} | {email['subject']} | {email['draft_reply']}\n")
+                    st.success("Queued.")
 
         with c3:
-            if st.button('Discard', key=f'discard_{idx}'):
-                st.warning('Discarded.')
+            if st.button("Discard", key=f"discard_{idx}"):
+                st.warning("Discarded.")
 
 
