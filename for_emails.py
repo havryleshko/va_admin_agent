@@ -6,7 +6,7 @@ from utils import send_email
 
 def get_unread_emails():
     service = get_gmail()
-    results = service.users().messages().list(userID='me', q='is:unread').execute()
+    results = service.users().messages().list(userId='me', q='is:unread').execute()
     messages = results.get('messages', []) # returning messages
     emails = [] # creates actual full list for storing all data later
 
