@@ -2,12 +2,14 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 from email.mime.text import MIMEText #Multipurpose Internet Main Extensions - to create plain text email bodies
 import base64 #to encode email content into Base64URL
-
-
+import json
+import os
+import streamlit as st
 
 def get_gmail():
     SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
-    flow = InstalledAppFlow.from_client_secrets_file('config/client_secret_919073950139-8o8c4fhkkrf3cvs5gdsaje6ri51du5bh.apps.googleusercontent.com.json', SCOPES)
+    client_config = {'installed': dict(st.secrets['gmail_credentials']['installed'])}
+    flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
     credentials = flow.run_local_server(port=0)
     return build('gmail', 'v1', credentials=credentials)
 
