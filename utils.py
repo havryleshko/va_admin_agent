@@ -10,9 +10,21 @@ def get_gmail():
     SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
     client_config = {'installed': dict(st.secrets['gmail_credentials']['installed'])}
     flow = InstalledAppFlow.from_client_config(client_config, SCOPES)
-    credentials = flow.run_local_server(port=0)
-    return build('gmail', 'v1', credentials=credentials)
+    if "credentials" in st.session_state:
+        credentials = st.session_state["credentials"]
+        return build('gmail', 'v1', credentials=credentials)
 
+    auth, _ = flow.authorization_url(prompt='consent') #pop up win for permissions to access gmail; consent for consent screen
+    st.write("**Authorise Gmail access below:**")
+    st.markdown(f"[Authorise Gmail access:]({auth})", unsafe_allow_html=True)
+    code = st.text_input("**Paste auth code:**")
+    if code:
+        flow.fetch_token(code=code)
+        credentials = flow.credentials
+        st.session_state["credentials"] = credentials
+        return build('gmail', 'v1', credentials=credentials)
+    
+    return None
 
 
 def create_message(to, subject, text):
