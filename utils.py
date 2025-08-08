@@ -41,7 +41,10 @@ def get_gmail():
         
         flow.fetch_token(code=code)
         st.session_state["credentials"] = flow.credentials
-        return build("gmail", "v1", credentials=flow.credentials)
+
+        st.query_params.clear()
+        st.rerun()
+        return None
 
     auth, state = flow.authorization_url(
         access_type="offline",
