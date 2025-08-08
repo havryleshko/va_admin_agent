@@ -11,10 +11,10 @@ if st.button('Load emails'): # click = 'if' becomes True,
         st.warning('Complete Google sign in please to get Gmail access')
     else:
         result = draft_reply()
-    if result:
-        st.session_state.classified_emails = result
-    else:
-        st.warning("Please authenticate Gmail first before loading emails.") #calls draft_reply and stores results in session_state
+        if result:
+            st.session_state.classified_emails = result
+        else:
+            st.info("No unread emails found")
 
 # displaying outcomes from loading emails and other:
 if 'classified_emails' in st.session_state:
