@@ -1,12 +1,20 @@
 from llm_central import llm_clf, llm_draft_reply
-from for_emails import get_unread_emails, classify_email, draft_reply, sending_email
+from for_emails import draft_reply, sending_email
 import streamlit as st
+from utils import get_gmail
 
 st.set_page_config(page_title='VA AI agent', page_icon='📜')
 st.title('VA AI for automated admin')
-if 'classified_emails' not in st.session_state: # checks if 'classified_emails' exist
-    if st.button('Load emails'): # click = 'if' becomes True, 
-        st.session_state.classified_emails = draft_reply() #calls draft_reply and stores results in session_state
+if st.button('Load emails'): # click = 'if' becomes True, 
+    service = get_gmail()
+    if service is None:
+        st.warning('Complete Google sign in please to get Gmail access')
+    else:
+        result = draft_reply()
+    if result:
+        st.session_state.classified_emails = result
+    else:
+        st.warning("Please authenticate Gmail first before loading emails.") #calls draft_reply and stores results in session_state
 
 # displaying outcomes from loading emails and other:
 if 'classified_emails' in st.session_state:
@@ -29,7 +37,7 @@ if 'classified_emails' in st.session_state:
             if st.button("Queue", key=f"queue_{idx}"):
                 with open("queue_list.txt", "a") as f:
                     f.write(f"{email['sender']} | {email['subject']} | {email['draft_reply']}\n")
-                    
+
                     st.success("Queued.")
 
         with c3:
