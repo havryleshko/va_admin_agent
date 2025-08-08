@@ -8,8 +8,8 @@ import streamlit as st
 SCOPES = ['https://www.googleapis.com/auth/gmail.modify']
 
 def get_redirect():
-    redirect = st.secrets["gmail_credentials"]["web"].get("redirect_uris", [])
-    return redirect
+    return "https://vaappagent.streamlit.app/"
+
 
 def get_gmail():
     if "credentials" in st.session_state:
