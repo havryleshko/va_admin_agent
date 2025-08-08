@@ -14,6 +14,7 @@ def get_redirect():
 def get_gmail():
     if "credentials" in st.session_state:
         return build('gmail', 'v1', credentials=st.session_state["credentials"])
+    
 
     try:
         web_config = dict(st.secrets["gmail_credentials"]["web"])
