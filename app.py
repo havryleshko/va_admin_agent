@@ -1,10 +1,20 @@
-from llm_central import llm_clf, llm_draft_reply
-from for_emails import draft_reply, sending_email
+
+from for_emails import draft_reply
 import streamlit as st
-from utils import get_gmail
+from utils import get_gmail, send_email
+from for_emails import queue_email, discard_email
+
 
 st.set_page_config(page_title='VA AI agent', page_icon='📜')
 st.title('VA AI for automated admin')
+
+with st.sidebar:
+    if st.button('Sign out'):
+        if "credentials" in st.session_state:
+            del st.session_state["credentials"]
+        st.query_params.clear()
+        st.rerun()
+        
 if st.button('Load emails'): # click = 'if' becomes True, 
     service = get_gmail()
     if service is None:
@@ -20,28 +30,28 @@ if st.button('Load emails'): # click = 'if' becomes True,
 if 'classified_emails' in st.session_state:
     for idx, email in enumerate(st.session_state.classified_emails): # looping through each email - idx is index 'enumerate' creates for each e
         st.markdown('---') #. visual separation
-        st.write(f"**Subject:** {email['subject']}") # for subject
-        st.write(f"**From:** {email['sender']}") # from
-        st.write(f"**Category:** {email['category']}") # category
-        st.write(f"**Snippet:** {email['snippet']}") # snippet
+        st.markdown(f"**Subject:** {email['subject']}") # for subject
+        st.markdown(f"**From:** {email['sender']}") # from
+        st.markdown(f"**Category:** {email['category']}") # category
+        st.markdown(f"**Snippet:** {email['snippet']}") # snippet
+        edited = st.text_area("Edit draft reply", value=email.get("draft_reply", ""), key=f"reply_{idx}")
 
     # creating texting area 
-        edited = st.text_area(label="Edit draft reply", value=email["draft_reply"], key=f"reply_{idx}")
-        c1, c2, c3 = st.columns(3) # columns for email buttons
+        c1, c2, c3 = st.columns(3)
         with c1:
             if st.button('Send', key=f'send_{idx}'):
-                sending_email(to=email['sender'], subject='RE: ' + email['subject'], text=edited) #calling func for email send
+                send_email(to=email['sender'], subject='RE: ' + email['subject'], text=edited)
                 st.success('Email sent!')
-
         with c2:
             if st.button("Queue", key=f"queue_{idx}"):
-                with open("queue_list.txt", "a") as f:
-                    f.write(f"{email['sender']} | {email['subject']} | {email['draft_reply']}\n")
-
-                    st.success("Queued.")
-
+                queue_email(email['sender'], email['subject'], edited)
+                st.success("Queued.")
         with c3:
             if st.button("Discard", key=f"discard_{idx}"):
+                discard_email(email['sender'], email['subject'])
                 st.warning("Discarded.")
+
+elif 'classified_emails' in st.session_state and not st.session_state.classified_emails:
+    st.info("No unread emails in the inbox!")
 
 

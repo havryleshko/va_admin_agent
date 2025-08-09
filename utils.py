@@ -75,4 +75,3 @@ def send_email(to, subject, text):
     message = create_message(to, subject, text)
     sent = service.users().messages().send(userId='me', body=message).execute() # sends email using user's Gmail via GmailAPI
     return sent
-

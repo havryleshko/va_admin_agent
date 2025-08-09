@@ -3,25 +3,30 @@ from llm_central import llm_clf
 from llm_central import llm_draft_reply
 from utils import send_email
 from googleapiclient.errors import HttpError
+import streamlit as st
 
 
 def get_unread_emails():
     service = get_gmail()
     if service is None:
-        raise RuntimeError("Please sign in first")
+        st.warning("Please sign in first")
+        return []
     
     try:
-        results = service.users().messages().list(userId='me', q='is:unread').execute()
+        results = service.users().messages().list(userId='me', q='is:unread', maxResults=25).execute()
     except HttpError as e:
-        print(f"Debug: Gmail API {e}")
+        st.info(f"Debug: Gmail API {e}")
         return []
-    messages = results.get('messages', []) # returning messages
+    messages = results.get('messages', []) or [] # returning messages
     emails = [] # creates actual full list for storing all data later
 
 
     for m in messages: #for each message get its details
+
+        m_id = m.get('id') #need the email id to get full content
+        if not m_id:
+            continue
         try:
-            m_id = m['id'] #need the email id to get full content
             m_data = service.users().messages().get(userId='me', id=m_id, format='full').execute() #pulling all content 
 
             headers = m_data['payload'].get('headers', []) #getting header from email
@@ -37,7 +42,7 @@ def get_unread_emails():
             }) # creating dict into one obj
 
         except HttpError as e:
-            print(f'Debug: error retrieving message {m_id}, {e}')
+            st.warning(f'Debug: error retrieving message {m_id}, {e}')
             continue
 
     return emails
@@ -65,26 +70,10 @@ def draft_reply():
 
     return replied
 
-def sending_email():
-    draft_emails = draft_reply() # gets emails with draft replies
-    for e in draft_emails:
-        print('Subject:', e['subject'])
-        print('From:', e['sender'])
-        print('Category:', e['category'])
-        print('Draft Reply:', e['draft_reply'])
+def queue_email(sender: str, subject: str, draft: str):
+    with open("queue_list.txt", "a") as f:
+        f.write(f"{sender} | {subject} | {draft}\n")
+    return True
 
-        choice = input('Send it, queue it or discard it?').strip().lower()
-
-        if choice == 'send':
-            send_email(to=e['sender'], subject='RE: ' + e['subject'], text=e['draft_reply'])
-            print('Email sent!')
-        elif choice == 'queue':
-            with open('queue_list.txt', 'a') as f:
-                f.write(f"{e['sender']} | {e['subject']} | {e['draft_reply']}")
-            print('Queued!')
-
-        elif choice == 'discard':
-            print('Discarded!')
-
-        else:
-            print('Invalid choice!')
+def discard_email(_sender: str, _subject: str):
+    return True
