@@ -6,10 +6,14 @@ from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTempla
 from langchain.memory import ConversationBufferMemory
 from langchain_community.vectorstores import FAISS
 
-def llm_clf(email_text: str):
+def _get_key():
     load_dotenv()
     openai_api_key = os.getenv('OPENAI_API_KEY') #opening .env file
-    llm = ChatOpenAI(model='gpt-4o', temperature=0.7, openai_api_key=openai_api_key)
+    return openai_api_key
+
+def llm_clf(email_text: str):
+    openai_api_key = _get_key()
+    llm = ChatOpenAI(model='gpt-5-nano', temperature=0.7, openai_api_key=openai_api_key)
 
     #defining prompt template for this specific instance
     reasoning_clf = ChatPromptTemplate.from_messages([
@@ -33,9 +37,8 @@ Return only the category name.'''
     
 
 def llm_draft_reply(email_text: str, category: str): # needs both content and category for relevant response
-    load_dotenv()
-    openai_api_key = os.getenv('OPENAI_API_KEY')
-    llm = ChatOpenAI('gpt-4o', openai_api_key=openai_api_key, temperature=0.7)
+    openai_api_key = _get_key()
+    llm = ChatOpenAI(model='gpt-5-nano', openai_api_key=openai_api_key, temperature=0.7)
 
     reasoning_reply = ChatPromptTemplate.from_messages([
         SystemMessagePromptTemplate.from_template('''You are my helpful assistant writing a friendly response.  
