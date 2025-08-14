@@ -1,27 +1,38 @@
-from supabase import create_client
 import streamlit as st
+from supabase import create_client
 from for_emails import draft_reply, queue_email, discard_email
 from utils import get_gmail, send_email
 
+# --- Supabase setup ---
 url = st.secrets["SUPABASE_URL"]
 key = st.secrets["SUPABASE_KEY"]
 supabase = create_client(url, key)
 
-user_resp = supabase.auth.get_user()
-if user_resp.data:
-    current_user_id = user_resp.data.id
-else:
-    st.warning("Please sign in with Google first")
-    st.stop()
-
+# --- Streamlit page setup ---
 st.set_page_config(page_title="VA AI agent", page_icon="📜")
 st.title("VA AI for automated admin")
 
+# --- Check signed-in user ---
+# Supabase Auth session token is required
+session = supabase.auth.get_session()
+if session and session.data and session.data.access_token:
+    user_resp = supabase.auth.get_user(session.data.access_token)
+    if user_resp.data:
+        current_user_id = user_resp.data.id
+    else:
+        st.warning("Could not retrieve user info. Please sign in with Google.")
+        st.stop()
+else:
+    st.warning("Please sign in with Google first.")
+    st.stop()
+
+# --- Sidebar: Sign out ---
 with st.sidebar:
     if st.button("Sign out"):
         supabase.auth.sign_out()
         st.experimental_rerun()
 
+# --- Load emails ---
 if st.button("Load emails"):
     service = get_gmail()
     if service is None:
@@ -33,6 +44,7 @@ if st.button("Load emails"):
         else:
             st.info("No unread emails found")
 
+# --- Display emails and actions ---
 if "classified_emails" in st.session_state:
     for idx, email in enumerate(st.session_state.classified_emails):
         st.markdown("---")
@@ -46,7 +58,6 @@ if "classified_emails" in st.session_state:
         with c1:
             if st.button("Send", key=f"send_{idx}"):
                 send_email(to=email["sender"], subject="RE: " + email["subject"], text=edited)
-                # update task status to done if previously queued
                 supabase.table("tasks").update({"status": "done"})\
                     .eq("user_id", current_user_id).eq("title", f"Reply: {email['subject']}").execute()
                 st.success("Email sent and task marked done")
@@ -54,7 +65,6 @@ if "classified_emails" in st.session_state:
         with c2:
             if st.button("Queue", key=f"queue_{idx}"):
                 queue_email(email["sender"], email["subject"], edited)
-                # insert task into Supabase
                 supabase.table("tasks").insert({
                     "title": f"Reply: {email['subject']}",
                     "user_id": current_user_id,
@@ -65,7 +75,6 @@ if "classified_emails" in st.session_state:
         with c3:
             if st.button("Discard", key=f"discard_{idx}"):
                 discard_email(email["sender"], email["subject"])
-                # optionally mark any related task as discarded
                 supabase.table("tasks").update({"status": "discarded"})\
                     .eq("user_id", current_user_id).eq("title", f"Reply: {email['subject']}").execute()
                 st.warning("Email discarded and task updated")
