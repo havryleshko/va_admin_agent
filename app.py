@@ -4,6 +4,8 @@ import streamlit as st
 from utils import get_gmail, send_email
 from for_emails import queue_email, discard_email
 
+st.write(st.secrets)
+
 
 st.set_page_config(page_title='VA AI agent', page_icon='📜')
 st.title('VA AI for automated admin')
