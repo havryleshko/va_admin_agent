@@ -56,12 +56,17 @@ elif 'classified_emails' in st.session_state and not st.session_state.classified
 
 from supabase import create_client # entry point to connect to Supabase
 
-url = "https://dqgwzqotrbvzynvwsmky.supabase.co"
-key = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRxZ3d6cW90cmJ2enludndzbWt5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTUxNjA2NjMsImV4cCI6MjA3MDczNjY2M30.J41TYDeC3ri2HPc2su9zoNo4X7X1tMBhmJQFgWIfGjw"
+url = st.secrets['SUPABASE_URL']
+key = st.secrets['SUPABASE_KEY']
 
 supabase = create_client(url, key)
 current_user_id = "demo_user"
 task_id = "demo_task"
-supabase.table("tasks").inserts({"title": "Reply to client email"}).execute() # inserting new tasks 
+supabase.table("tasks").insert({
+    "title": "Reply to client email",
+    "user_id": current_user_id,
+    "status": "pending"
+}).execute() # inserting new tasks 
+
 tasks = supabase.table("tasks").select("*").eq("user_id", current_user_id).execute() # to show pending tasks
-supabase.table("tasks").update({"status": "done"}).eq("task_id", task_id).execute() # to update status after agent makes changes
+supabase.table("tasks").update({"status": "done"}).eq("id", task_id).execute() # to update status after agent makes changes
