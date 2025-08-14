@@ -58,8 +58,8 @@ elif 'classified_emails' in st.session_state and not st.session_state.classified
 
 from supabase import create_client # entry point to connect to Supabase
 
-url = st.secrets["gmail_credentials"]['SUPABASE_URL']
-key = st.secrets["gmail_credentials"]['SUPABASE_KEY']
+url = st.secrets['SUPABASE_URL']
+key = st.secrets['SUPABASE_KEY']
 
 supabase = create_client(url, key)
 current_user_id = "demo_user"
