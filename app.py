@@ -11,7 +11,7 @@ st.set_page_config(page_title="VA AI agent", page_icon="📜")
 st.title("VA AI for automated admin")
 
 if "session" not in st.session_state:
-    params = st.query_params()
+    params = st.query_params
     if "access_token" in params and "refresh_token" in params:
         session_data = {
             "access_token": params["access_token"][0],
