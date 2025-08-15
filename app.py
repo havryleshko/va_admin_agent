@@ -14,7 +14,7 @@ st.set_page_config(page_title="VA AI agent", page_icon="📜")
 st.title("VA AI for automated admin")
 
 if "session" not in st.session_state:
-    params = parse_qs(urlparse(st.experimental_get_query_params().get("url", "")).query)
+    params = parse_qs(urlparse(st.query_params.get("url", "")).query)
     if "access_token" in params:
         st.session_state.session = {
             "access_token": params["access_token"][0],
