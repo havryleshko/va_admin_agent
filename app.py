@@ -3,36 +3,43 @@ from supabase import create_client
 from for_emails import draft_reply, queue_email, discard_email
 from utils import get_gmail, send_email
 
-# --- Supabase setup ---
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-supabase = create_client(url, key)
+SUPABASE_URL = st.secrets["SUPABASE_URL"]
+SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# --- Streamlit page setup ---
 st.set_page_config(page_title="VA AI agent", page_icon="📜")
 st.title("VA AI for automated admin")
 
-# --- Check signed-in user ---
-# Supabase Auth session token is required
-session = supabase.auth.get_session()
-if session and session.data and session.data.access_token:
-    user_resp = supabase.auth.get_user(session.data.access_token)
-    if user_resp.data:
-        current_user_id = user_resp.data.id
+if "session" not in st.session_state:
+    params = st.experimental_get_query_params()
+    if "access_token" in params and "refresh_token" in params:
+        session_data = {
+            "access_token": params["access_token"][0],
+            "refresh_token": params["refresh_token"][0],
+        }
+        st.session_state.session = session_data
+        supabase.auth.set_session(session_data["access_token"], session_data["refresh_token"])
     else:
-        st.warning("Could not retrieve user info. Please sign in with Google.")
+        st.write("## Please log in")
+        if st.button("Sign in with Google"):
+            redirect_url = st.secrets["redirect_url"]
+            auth_url = f"{SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
+            st.markdown(f"[Click here to sign in]({auth_url})")
         st.stop()
-else:
-    st.warning("Please sign in with Google first.")
+
+user_resp = supabase.auth.get_user(st.session_state.session["access_token"])
+if not user_resp or not user_resp.user:
+    st.warning("Could not retrieve user info. Please sign in again.")
     st.stop()
 
-# --- Sidebar: Sign out ---
+current_user_id = user_resp.user.id
+
 with st.sidebar:
     if st.button("Sign out"):
         supabase.auth.sign_out()
+        st.session_state.clear()
         st.experimental_rerun()
 
-# --- Load emails ---
 if st.button("Load emails"):
     service = get_gmail()
     if service is None:
@@ -44,7 +51,6 @@ if st.button("Load emails"):
         else:
             st.info("No unread emails found")
 
-# --- Display emails and actions ---
 if "classified_emails" in st.session_state:
     for idx, email in enumerate(st.session_state.classified_emails):
         st.markdown("---")
