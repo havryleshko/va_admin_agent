@@ -3,29 +3,27 @@ from supabase import create_client
 from for_emails import draft_reply, queue_email, discard_email
 from utils import get_gmail, send_email
 
+
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-st.set_page_config(page_title="VA AI agent", page_icon="📜")
-st.title("VA AI for automated admin")
-
-if "session" not in st.session_state:
-    params = st.query_params
-    if "access_token" in params and "refresh_token" in params:
-        session_data = {
-            "access_token": params["access_token"][0],
-            "refresh_token": params["refresh_token"][0],
-        }
-        st.session_state.session = session_data
-        supabase.auth.set_session(session_data["access_token"], session_data["refresh_token"])
+# Check if user is already signed in
+if "user" not in st.session_state:
+    user = supabase.auth.get_user()
+    if user and user.user:
+        st.session_state.user = user.user
     else:
         st.write("## Please log in")
         if st.button("Sign in with Google"):
-            redirect_url = st.secrets["redirect_url"]
-            auth_url = f"{SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
-            st.markdown(f"[Click here to sign in]({auth_url})")
+            # Use Supabase hosted login page
+            supabase.auth.sign_in(provider="google", redirect_to="https://vaappagent.streamlit.app/")
         st.stop()
+
+current_user_id = st.session_state.user.id
+
+st.set_page_config(page_title="VA AI agent", page_icon="📜")
+st.title("VA AI for automated admin")
 
 user_resp = supabase.auth.get_user(st.session_state.session["access_token"])
 if not user_resp or not user_resp.user:
