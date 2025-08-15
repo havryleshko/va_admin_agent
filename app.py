@@ -8,35 +8,24 @@ SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# Check if user is already signed in
-if "user" not in st.session_state:
-    user = supabase.auth.get_user()
-    if user and user.user:
-        st.session_state.user = user.user
-    else:
-        st.write("## Please log in")
-        if st.button("Sign in with Google"):
-            # Use Supabase hosted login page
-            supabase.auth.sign_in(provider="google", redirect_to="https://vaappagent.streamlit.app/")
-        st.stop()
-
-current_user_id = st.session_state.user.id
 
 st.set_page_config(page_title="VA AI agent", page_icon="📜")
 st.title("VA AI for automated admin")
 
-user_resp = supabase.auth.get_user(st.session_state.session["access_token"])
-if not user_resp or not user_resp.user:
-    st.warning("Could not retrieve user info. Please sign in again.")
+if "user" not in st.session_state:
+    st.write("## Please log in")
+    redirect_url = "https://vaappagent.streamlit.app/"
+    auth_url = f"{SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
+    st.markdown(f"[Click here to sign in with Google]({auth_url})")
     st.stop()
 
-current_user_id = user_resp.user.id
+current_user_id = st.session_state.user.id  # this assumes you have somehow stored it in session_state previously
 
 with st.sidebar:
     if st.button("Sign out"):
-        supabase.auth.sign_out()
         st.session_state.clear()
         st.experimental_rerun()
+
 
 if st.button("Load emails"):
     service = get_gmail()
@@ -48,6 +37,7 @@ if st.button("Load emails"):
             st.session_state.classified_emails = result
         else:
             st.info("No unread emails found")
+
 
 if "classified_emails" in st.session_state:
     for idx, email in enumerate(st.session_state.classified_emails):
