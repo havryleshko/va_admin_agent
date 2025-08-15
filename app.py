@@ -2,30 +2,44 @@ import streamlit as st
 from supabase import create_client
 from for_emails import draft_reply, queue_email, discard_email
 from utils import get_gmail, send_email
-
+from urllib.parse import parse_qs, urlparse
 
 SUPABASE_URL = st.secrets["SUPABASE_URL"]
 SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+REDIRECT_URL = st.secrets["REDIRECT_URL"]
 
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 st.set_page_config(page_title="VA AI agent", page_icon="📜")
 st.title("VA AI for automated admin")
 
-if "user" not in st.session_state:
-    st.write("## Please log in")
-    redirect_url = "https://vaappagent.streamlit.app/"
-    auth_url = f"{SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to={redirect_url}"
-    st.markdown(f"[Click here to sign in with Google]({auth_url})")
+if "session" not in st.session_state:
+    params = parse_qs(urlparse(st.experimental_get_query_params().get("url", "")).query)
+    if "access_token" in params:
+        st.session_state.session = {
+            "access_token": params["access_token"][0],
+            "refresh_token": params.get("refresh_token", [""])[0],
+        }
+        supabase.auth.set_session(st.session_state.session["access_token"])
+    else:
+        st.write("## Please log in")
+        auth_url = f"{SUPABASE_URL}/auth/v1/authorize?provider=google&redirect_to={REDIRECT_URL}"
+        st.markdown(f"[Click here to sign in with Google]({auth_url})")
+        st.stop()
+
+user_resp = supabase.auth.get_user(st.session_state.session["access_token"])
+if not user_resp or not user_resp.user:
+    st.warning("Could not retrieve user info. Please sign in again.")
     st.stop()
 
-current_user_id = st.session_state.user.id  # this assumes you have somehow stored it in session_state previously
+current_user_id = user_resp.user.id
+
 
 with st.sidebar:
     if st.button("Sign out"):
+        supabase.auth.sign_out()
         st.session_state.clear()
         st.experimental_rerun()
-
 
 if st.button("Load emails"):
     service = get_gmail()
@@ -37,7 +51,6 @@ if st.button("Load emails"):
             st.session_state.classified_emails = result
         else:
             st.info("No unread emails found")
-
 
 if "classified_emails" in st.session_state:
     for idx, email in enumerate(st.session_state.classified_emails):
@@ -72,6 +85,3 @@ if "classified_emails" in st.session_state:
                 supabase.table("tasks").update({"status": "discarded"})\
                     .eq("user_id", current_user_id).eq("title", f"Reply: {email['subject']}").execute()
                 st.warning("Email discarded and task updated")
-
-elif "classified_emails" in st.session_state and not st.session_state.classified_emails:
-    st.info("No unread emails in the inbox")
