@@ -4,12 +4,14 @@ A modern Next.js frontend for the VA Admin Agent, an AI-powered email management
 
 ## Features
 
+- 🔐 **Gmail OAuth Authentication**: Secure login with Google accounts
 - 📧 **Email Management**: View and manage unread emails from Gmail
 - 🤖 **AI Classification**: Automatically categorize emails using OpenAI
 - ✍️ **AI Draft Replies**: Generate contextual email responses
 - 📊 **Dashboard Stats**: Overview of email metrics
 - 🎨 **Modern UI**: Clean, responsive design with Tailwind CSS
 - ⚡ **Real-time Updates**: Live email status and actions
+- 🛡️ **Protected Routes**: Secure access to email management features
 
 ## Tech Stack
 
@@ -115,8 +117,31 @@ The frontend is designed to work with the Python backend that provides:
 Create a `.env.local` file for local development:
 
 ```env
+# Frontend Environment Variables
 NEXT_PUBLIC_API_URL=http://localhost:8000
+
+# Backend API Configuration
+NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+
+# Google OAuth Configuration
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
+NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Optional: Analytics
+NEXT_PUBLIC_GA_ID=your-google-analytics-id
 ```
+
+### Setting up Google OAuth
+
+1. Go to [Google Cloud Console](https://console.cloud.google.com/)
+2. Create a new project or select existing one
+3. Enable Gmail API
+4. Create OAuth 2.0 credentials
+5. Add authorized redirect URIs:
+   - `http://localhost:3000/api/auth/callback` (for development)
+   - `https://yourdomain.com/api/auth/callback` (for production)
+6. Copy Client ID and Client Secret to your `.env.local` file
 
 ## Contributing
 
