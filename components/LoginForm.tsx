@@ -32,8 +32,15 @@ export default function LoginForm() {
     setIsLoading(true)
 
     try {
-      // Redirect to Gmail OAuth
+      // Check if OAuth is configured
       const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+      if (!clientId || clientId === 'your-google-client-id.apps.googleusercontent.com') {
+        setError('Google OAuth not configured. Please check your environment variables.')
+        setIsLoading(false)
+        return
+      }
+
+      // Redirect to Gmail OAuth
       const redirectUri = `${window.location.origin}/api/auth/callback`
       const scope = 'https://www.googleapis.com/auth/gmail.modify'
       
