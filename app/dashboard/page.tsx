@@ -2,45 +2,26 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext'
 import { Mail, Send, Trash2, RefreshCw, User, Clock, Tag, LogOut } from 'lucide-react'
 import EmailCard from '@/components/EmailCard'
 import EmailDetail from '@/components/EmailDetail'
 import { Email } from '@/types/email'
 
 export default function DashboardPage() {
-  const { user, isAuthenticated, isLoading, logout } = useAuth()
+  const { user, isLoading, signOut } = useSupabaseAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Handle OAuth callback data
-  useEffect(() => {
-    const userParam = searchParams.get('user')
-    const tokenParam = searchParams.get('token')
-    
-    if (userParam && tokenParam && !isAuthenticated) {
-      try {
-        const userData = JSON.parse(decodeURIComponent(userParam))
-        const token = decodeURIComponent(tokenParam)
-        
-        // Store auth data
-        localStorage.setItem('auth_token', token)
-        localStorage.setItem('user_data', JSON.stringify(userData))
-        
-        // Reload page to update auth state
-        window.location.href = '/dashboard'
-      } catch (error) {
-        console.error('Error parsing OAuth data:', error)
-      }
-    }
-  }, [searchParams, isAuthenticated])
+  // Supabase handles OAuth callbacks automatically
+  // No need for manual OAuth callback handling
 
   // Redirect to login if not authenticated
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (!isLoading && !user) {
       router.push('/login')
     }
-  }, [isLoading, isAuthenticated, router])
+  }, [isLoading, user, router])
 
   const [emails, setEmails] = useState<Email[]>([])
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
@@ -116,7 +97,7 @@ export default function DashboardPage() {
   }
 
   const handleLogout = async () => {
-    await logout()
+    await signOut()
     router.push('/login')
   }
 
@@ -128,7 +109,7 @@ export default function DashboardPage() {
     )
   }
 
-  if (!isAuthenticated) {
+  if (!user) {
     return null
   }
 
@@ -144,14 +125,14 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                {user?.image && (
+                {user?.user_metadata?.avatar_url && (
                   <img 
-                    src={user.image} 
-                    alt={user.name || user.email} 
+                    src={user.user_metadata.avatar_url} 
+                    alt={user.user_metadata?.full_name || user.email} 
                     className="h-8 w-8 rounded-full"
                   />
                 )}
-                <span className="text-sm text-gray-700">{user?.name || user?.email}</span>
+                <span className="text-sm text-gray-700">{user?.user_metadata?.full_name || user?.email}</span>
               </div>
               <button
                 onClick={handleLogout}

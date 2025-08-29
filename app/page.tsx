@@ -2,21 +2,21 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext'
 
 export default function Home() {
-  const { isAuthenticated, isLoading } = useAuth()
+  const { user, isLoading } = useSupabaseAuth()
   const router = useRouter()
 
   useEffect(() => {
     if (!isLoading) {
-      if (isAuthenticated) {
+      if (user) {
         router.push('/dashboard')
       } else {
         router.push('/login')
       }
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [user, isLoading, router])
 
   return (
     <div className="min-h-screen flex items-center justify-center">

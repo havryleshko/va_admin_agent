@@ -1,5 +1,5 @@
-import LoginForm from '@/components/LoginForm'
+import SupabaseLoginForm from '@/components/SupabaseLoginForm'
 
 export default function LoginPage() {
-  return <LoginForm />
+  return <SupabaseLoginForm />
 }
