@@ -16,15 +16,21 @@ export default function SupabaseLoginForm() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/dashboard`
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
         }
       })
 
       if (error) {
+        console.error('OAuth error:', error)
         setError(error.message)
         setIsLoading(false)
       }
     } catch (err) {
+      console.error('Login error:', err)
       setError('Login failed. Please try again.')
       setIsLoading(false)
     }

@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext'
-import { Mail, Send, Trash2, RefreshCw, User, Clock, Tag, LogOut } from 'lucide-react'
+import { Mail, Send, Trash2, RefreshCw, User, Clock, Tag, LogOut, AlertCircle } from 'lucide-react'
 import EmailCard from '@/components/EmailCard'
 import EmailDetail from '@/components/EmailDetail'
 import { Email } from '@/types/email'
+import { fetchEmails, classifyEmails, generateDraftReplies, sendEmailReply, discardEmail, getEmailStats, EmailStats } from '@/lib/api'
 
 export default function DashboardPage() {
-  const { user, isLoading, signOut } = useSupabaseAuth()
+  const { user, session, isLoading, signOut } = useSupabaseAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -26,69 +27,97 @@ export default function DashboardPage() {
   const [emails, setEmails] = useState<Email[]>([])
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
   const [loading, setLoading] = useState(false)
-  const [stats, setStats] = useState({
+  const [error, setError] = useState<string | null>(null)
+  const [stats, setStats] = useState<EmailStats>({
     total: 0,
     unread: 0,
     categorized: 0
   })
 
-  // Mock data for demonstration
+  // Load real email data when user is authenticated
   useEffect(() => {
-    const mockEmails: Email[] = [
-      {
-        id: '1',
-        subject: 'Invoice #12345 - Payment Due',
-        sender: 'billing@company.com',
-        snippet: 'Your invoice for services rendered is now due. Please process payment within 30 days.',
-        category: 'Invoice/Payment',
-        draftReply: 'Thank you for the invoice. I will process the payment within the next few days.',
-        isRead: false,
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000)
-      },
-      {
-        id: '2',
-        subject: 'Meeting Request - Q4 Planning',
-        sender: 'manager@company.com',
-        snippet: 'Hi, I would like to schedule a meeting to discuss our Q4 planning and strategy.',
-        category: 'Meeting',
-        draftReply: 'Sounds great! I\'m available this week. What time works best for you?',
-        isRead: false,
-        timestamp: new Date(Date.now() - 4 * 60 * 60 * 1000)
-      },
-      {
-        id: '3',
-        subject: 'New Lead - Potential Client',
-        sender: 'sales@prospect.com',
-        snippet: 'We are interested in your services and would like to learn more about your offerings.',
-        category: 'Lead',
-        draftReply: 'Thank you for your interest! I\'d be happy to schedule a call to discuss how we can help.',
-        isRead: true,
-        timestamp: new Date(Date.now() - 6 * 60 * 60 * 1000)
-      }
-    ]
+    if (user && session?.access_token) {
+      loadEmails()
+    }
+  }, [user, session])
+
+  const loadEmails = async () => {
+    if (!session?.access_token) return
     
-    setEmails(mockEmails)
-    setStats({
-      total: mockEmails.length,
-      unread: mockEmails.filter(e => !e.isRead).length,
-      categorized: mockEmails.length
-    })
-  }, [])
+    setLoading(true)
+    setError(null)
+    
+    try {
+      // Fetch unread emails from Gmail
+      const fetchedEmails = await fetchEmails(session.access_token)
+      
+      // Classify emails using AI
+      const classifiedEmails = await classifyEmails(fetchedEmails, session.access_token)
+      
+      // Generate draft replies
+      const emailsWithDrafts = await generateDraftReplies(classifiedEmails, session.access_token)
+      
+      setEmails(emailsWithDrafts)
+      
+      // Update stats
+      const emailStats = await getEmailStats(session.access_token)
+      setStats(emailStats)
+      
+    } catch (err) {
+      console.error('Error loading emails:', err)
+      setError('Failed to load emails. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   const handleRefresh = async () => {
-    setLoading(true)
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    setLoading(false)
+    await loadEmails()
   }
 
   const handleSendEmail = async (emailId: string) => {
-    console.log('Sending email:', emailId)
+    if (!session?.access_token) return
+    
+    try {
+      const email = emails.find(e => e.id === emailId)
+      if (!email?.draftReply) return
+      
+      const success = await sendEmailReply(emailId, email.draftReply, session.access_token)
+      
+      if (success) {
+        // Remove email from list after sending
+        setEmails(prev => prev.filter(e => e.id !== emailId))
+        if (selectedEmail?.id === emailId) {
+          setSelectedEmail(null)
+        }
+        // Refresh stats
+        const emailStats = await getEmailStats(session.access_token)
+        setStats(emailStats)
+      }
+    } catch (err) {
+      console.error('Error sending email:', err)
+      setError('Failed to send email. Please try again.')
+    }
   }
 
   const handleDiscardEmail = async (emailId: string) => {
-    setEmails(prev => prev.filter(e => e.id !== emailId))
-    if (selectedEmail?.id === emailId) {
-      setSelectedEmail(null)
+    if (!session?.access_token) return
+    
+    try {
+      const success = await discardEmail(emailId, session.access_token)
+      
+      if (success) {
+        setEmails(prev => prev.filter(e => e.id !== emailId))
+        if (selectedEmail?.id === emailId) {
+          setSelectedEmail(null)
+        }
+        // Refresh stats
+        const emailStats = await getEmailStats(session.access_token)
+        setStats(emailStats)
+      }
+    } catch (err) {
+      console.error('Error discarding email:', err)
+      setError('Failed to discard email. Please try again.')
     }
   }
 
@@ -145,6 +174,16 @@ export default function DashboardPage() {
           </div>
         </div>
       </header>
+
+      {/* Error Display */}
+      {error && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-2">
+            <AlertCircle className="h-5 w-5 text-red-500" />
+            <span className="text-red-700">{error}</span>
+          </div>
+        </div>
+      )}
 
       {/* Stats */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
