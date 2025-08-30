@@ -2,14 +2,16 @@
 
 This is the Flask backend API for the VA Admin Agent application.
 
-## 🚀 Railway Deployment
+## 🚀 Deployment Options
 
-### Prerequisites
+### Option 1: Railway Deployment
+
+#### Prerequisites
 - Railway account
 - OpenAI API key
 - Google OAuth credentials
 
-### Deployment Steps
+#### Deployment Steps
 
 1. **Connect to Railway:**
    - Go to [Railway](https://railway.app/)
@@ -32,7 +34,59 @@ This is the Flask backend API for the VA Admin Agent application.
    - It will install dependencies from `requirements.txt`
    - The app will start using the `Procfile`
 
-### API Endpoints
+### Option 2: Render Deployment (Recommended)
+
+#### Prerequisites
+- Render account
+- OpenAI API key
+- Google OAuth credentials
+
+#### Deployment Steps
+
+1. **Connect to Render:**
+   - Go to [Render](https://render.com/)
+   - Click "New +" → "Web Service"
+   - Connect your GitHub repository
+   - Select your repo: `va_admin_agent`
+   - **Important:** Set the **Root Directory** to `backend`
+
+2. **Configure the Service:**
+   - **Environment:** `Python 3`
+   - **Build Command:** `pip install -r requirements.txt`
+   - **Start Command:** `gunicorn app:app --bind 0.0.0.0:$PORT --workers 1 --timeout 120`
+   - **Plan:** Free (for testing) or Starter (for production)
+
+3. **Set Environment Variables:**
+   In Render dashboard, go to Environment → Environment Variables and add:
+   ```
+   OPENAI_API_KEY=your-openai-api-key
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   FLASK_ENV=production
+   FLASK_DEBUG=False
+   ```
+
+4. **Deploy:**
+   - Click "Create Web Service"
+   - Render will automatically deploy your app
+   - You'll get a URL like: `https://your-app-name.onrender.com`
+
+## 🆚 Railway vs Render
+
+**Render Advantages:**
+- ✅ Free tier available
+- ✅ Simpler interface
+- ✅ Better documentation
+- ✅ More predictable pricing
+
+**Railway Advantages:**
+- ✅ Faster deployments
+- ✅ More generous free tier
+- ✅ Better for complex setups
+
+**Both are excellent choices for your backend!**
+
+## API Endpoints
 
 - `GET /` - Health check
 - `GET /api/health` - API health check
@@ -43,7 +97,7 @@ This is the Flask backend API for the VA Admin Agent application.
 - `POST /api/emails/discard` - Discard email
 - `GET /api/emails/stats` - Get email statistics
 
-### Local Development
+## Local Development
 
 ```bash
 # Install dependencies
@@ -55,7 +109,7 @@ python app.py
 
 The server will start on `http://localhost:5000`
 
-### Files Structure
+## Files Structure
 
 ```
 backend/
