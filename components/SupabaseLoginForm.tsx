@@ -23,12 +23,16 @@ export default function SupabaseLoginForm() {
         // We don't need to handle the redirect manually
         console.log('🔍 AUTH DEBUG: OAuth flow initiated')
       } else {
-        throw new Error('Failed to initiate OAuth flow')
+        // Get the error message from the response
+        const errorData = await response.json()
+        console.error('❌ AUTH DEBUG: OAuth flow failed:', errorData)
+        throw new Error(errorData.error || 'Failed to initiate OAuth flow')
       }
       
     } catch (err) {
       console.error('❌ AUTH DEBUG: Unexpected error:', err)
-      setError('An unexpected error occurred. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -56,6 +60,9 @@ export default function SupabaseLoginForm() {
                   </h3>
                   <div className="mt-2 text-sm text-red-700">
                     {error}
+                  </div>
+                  <div className="mt-2 text-xs text-red-600">
+                    Please check that your environment variables are configured correctly.
                   </div>
                 </div>
               </div>
