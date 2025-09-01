@@ -50,10 +50,25 @@ def handle_emails():
             return jsonify({'error': 'No access token provided'}), 401
         
         if action == 'fetch_unread':
-            # For now, we'll use a mock approach since we need to convert OAuth token to credentials
-            # In production, you'd need to exchange the OAuth token for Gmail API credentials
-            emails = get_mock_emails()  # Replace with real Gmail API call
-            return jsonify({'emails': emails})
+            try:
+                # Try to use real Gmail API with the access token
+                # Convert Supabase access token to Gmail credentials
+                credentials = convert_token_to_credentials(access_token)
+                if credentials:
+                    # Use real Gmail API
+                    real_emails = get_unread_emails(credentials)
+                    # Convert to expected format
+                    formatted_emails = format_emails_for_frontend(real_emails)
+                    return jsonify({'emails': formatted_emails, 'source': 'gmail_api'})
+                else:
+                    # Fallback to mock emails if credentials conversion fails
+                    print("Using mock emails - credentials conversion failed")
+                    emails = get_mock_emails()
+                    return jsonify({'emails': emails, 'source': 'mock'})
+            except Exception as e:
+                print(f"Gmail API error: {e}, falling back to mock emails")
+                emails = get_mock_emails()
+                return jsonify({'emails': emails, 'source': 'mock', 'error': str(e)})
         
         return jsonify({'error': 'Invalid action'}), 400
         
@@ -149,6 +164,38 @@ def get_email_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+def convert_token_to_credentials(access_token):
+    """
+    Convert Supabase access token to Gmail API credentials.
+    This is a placeholder - you'll need to implement proper OAuth flow.
+    """
+    try:
+        # For now, return None to trigger mock emails
+        # In production, you'd exchange the token for Gmail API credentials
+        print(f"Token conversion not implemented yet. Token: {access_token[:20]}...")
+        return None
+    except Exception as e:
+        print(f"Token conversion error: {e}")
+        return None
+
+def format_emails_for_frontend(emails):
+    """
+    Convert Gmail API emails to frontend format.
+    """
+    formatted = []
+    for email in emails:
+        formatted.append({
+            'id': email.get('id', ''),
+            'subject': email.get('subject', 'No Subject'),
+            'sender': email.get('sender', 'Unknown'),
+            'snippet': email.get('snippet', ''),
+            'category': 'General',  # Will be set by classification
+            'draftReply': '',  # Will be set by draft generation
+            'isRead': False,
+            'timestamp': datetime.now().isoformat()
+        })
+    return formatted
+
 def get_mock_emails():
     """Temporary mock emails for testing - replace with real Gmail API calls"""
     return [
@@ -187,3 +234,4 @@ def get_mock_emails():
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
     app.run(host='0.0.0.0', port=port, debug=False)  # Set debug=False for production
+
