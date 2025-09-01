@@ -2,6 +2,7 @@ services:
   - type: web
     name: va-admin-agent-backend
     env: python
+    sourceDir: backend
     buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     envVars:
