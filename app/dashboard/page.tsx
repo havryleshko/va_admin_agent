@@ -8,7 +8,7 @@ import EmailCard from '@/components/EmailCard'
 import EmailDetail from '@/components/EmailDetail'
 import { Email } from '@/types/email'
 import { fetchEmails, classifyEmails, generateDraftReplies, sendEmailReply, discardEmail, getEmailStats, EmailStats } from '@/lib/api'
-import { GoogleTokens } from '@/lib/auth'
+import { GoogleTokens, getGoogleTokensFromSupabaseSession } from '@/lib/auth'
 
 export default function DashboardPage() {
   const { user, session, isLoading, signOut } = useSupabaseAuth()
@@ -36,20 +36,17 @@ export default function DashboardPage() {
 
   // Extract Google tokens from Supabase session
   useEffect(() => {
-    if (session?.provider_token) {
-      console.log('🔍 AUTH DEBUG: Found provider token in Supabase session')
+    if (session) {
+      console.log('🔍 AUTH DEBUG: Supabase session available:', session)
+      console.log('🔍 AUTH DEBUG: Provider token:', session.provider_token ? 'Available' : 'Missing')
       
-      // Supabase provides the Google OAuth token in provider_token
-      const tokens: GoogleTokens = {
-        access_token: session.provider_token,
-        expires_at: Date.now() + (3600 * 1000), // 1 hour from now
+      const tokens = getGoogleTokensFromSupabaseSession(session)
+      if (tokens) {
+        setGoogleTokens(tokens)
+        setDebugInfo('Google tokens extracted from Supabase session')
+      } else {
+        setDebugInfo('No Google tokens found in Supabase session - may need to re-authenticate')
       }
-      
-      setGoogleTokens(tokens)
-      setDebugInfo('Google tokens extracted from Supabase session')
-    } else {
-      console.log('🔍 AUTH DEBUG: No provider token found in session')
-      setDebugInfo('No Google tokens found in Supabase session')
     }
   }, [session])
 
@@ -229,7 +226,7 @@ export default function DashboardPage() {
       {/* Error Display */}
       {error && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-center space-x-2">
+          <div className="bg-red-50 border border-red-200 rounded-md p-4 flex items-center space-x-2">
             <AlertCircle className="h-5 w-5 text-red-500" />
             <span className="text-red-700">{error}</span>
           </div>
