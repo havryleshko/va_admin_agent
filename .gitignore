@@ -40,6 +40,6 @@ config/client_secret*.json
 config/credentials.json
 config/token.json
 
-# Python backend files (keep separate)
-*.py
-requirements.txt
+# Python backend files (keep separate) - but allow start_backend.py
+backend/*.py
+backend/requirements.txt
