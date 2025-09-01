@@ -11,6 +11,5 @@ langchain-openai>=0.0.2
 python-dotenv>=1.0.0
 email-validator>=2.0.0
 tqdm>=4.60.0
-supabase>=2.0.0
 requests>=2.31.0
 PyJWT>=2.8.0

@@ -2,21 +2,20 @@
 
 import { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext'
 
 export default function Home() {
-  const { user, isLoading } = useSupabaseAuth()
   const router = useRouter()
 
   useEffect(() => {
-    if (!isLoading) {
-      if (user) {
-        router.push('/dashboard')
-      } else {
-        router.push('/login')
-      }
+    // Check if user has Google tokens
+    const hasTokens = localStorage.getItem('google_tokens')
+    
+    if (hasTokens) {
+      router.push('/dashboard')
+    } else {
+      router.push('/login')
     }
-  }, [user, isLoading, router])
+  }, [router])
 
   return (
     <div className="min-h-screen flex items-center justify-center">

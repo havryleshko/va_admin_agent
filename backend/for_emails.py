@@ -2,7 +2,6 @@ from utils import get_gmail, send_email
 from llm_central import llm_clf, llm_draft_reply
 from googleapiclient.errors import HttpError
 from typing import List, Dict
-from supabase import Client
 
 
 def get_unread_emails(credentials) -> List[Dict]:
@@ -104,8 +103,8 @@ def send_email_service(credentials, to: str, subject: str, text: str):
     return send_email(service, to, subject, text)
 
 # supabase wrappers
-def queue_email_task(supabase: Client, user_id: str, sender: str, subject: str, draft: str):
+def queue_email_task(supabase, user_id: str, sender: str, subject: str, draft: str):
     return queue_email(supabase, user_id, sender, subject, draft)
 
-def discard_email_task(supabase: Client, user_id: str, subject: str):
+def discard_email_task(supabase, user_id: str, subject: str):
     return discard_email(supabase, user_id, subject)

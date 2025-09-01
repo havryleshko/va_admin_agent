@@ -51,22 +51,20 @@ def handle_emails():
             try:
                 print(f"Attempting Gmail API call with Google token...")
                 
-                # Try to fetch emails using the actual Google OAuth token
+                # Fetch emails using the actual Google OAuth token
                 real_emails = fetch_emails_with_google_token(google_access_token)
-                if real_emails:
+                if real_emails and len(real_emails) > 0:
                     # Convert to expected format
                     formatted_emails = format_emails_for_frontend(real_emails)
+                    print(f"Successfully fetched {len(formatted_emails)} real emails from Gmail")
                     return jsonify({'emails': formatted_emails, 'source': 'google_gmail'})
                 else:
-                    # Fallback to mock emails if Gmail API fails
-                    print("Gmail API failed, using mock emails")
-                    emails = get_mock_emails()
-                    return jsonify({'emails': emails, 'source': 'mock_fallback'})
+                    print("No emails found or Gmail API failed")
+                    return jsonify({'emails': [], 'source': 'google_gmail', 'message': 'No unread emails found'})
                     
             except Exception as e:
-                print(f"Gmail API error: {e}, falling back to mock emails")
-                emails = get_mock_emails()
-                return jsonify({'emails': emails, 'source': 'mock_error', 'error': str(e)})
+                print(f"Gmail API error: {e}")
+                return jsonify({'error': f'Gmail API error: {str(e)}', 'emails': []}), 500
         
         return jsonify({'error': 'Invalid action'}), 400
         
@@ -179,38 +177,68 @@ def fetch_emails_with_google_token(google_access_token):
             'maxResults': 25
         }
         
+        print(f"Making request to Gmail API: {gmail_url}")
         response = requests.get(gmail_url, headers=headers, params=params)
+        
+        print(f"Gmail API response status: {response.status_code}")
         
         if response.status_code == 200:
             print("Successfully fetched emails from Gmail API!")
             gmail_data = response.json()
             messages = gmail_data.get('messages', [])
             
+            print(f"Found {len(messages)} unread messages")
+            
+            if not messages:
+                print("No unread messages found")
+                return []
+            
             # Process each message to get full details
             emails = []
-            for msg in messages[:10]:  # Limit to 10 for now
-                msg_id = msg['id']
-                msg_response = requests.get(
-                    f'https://gmail.googleapis.com/gmail/v1/users/me/messages/{msg_id}',
-                    headers=headers
-                )
-                
-                if msg_response.status_code == 200:
-                    msg_data = msg_response.json()
-                    headers = msg_data['payload'].get('headers', [])
+            for i, msg in enumerate(messages[:10]):  # Limit to 10 for now
+                try:
+                    msg_id = msg['id']
+                    print(f"Processing message {i+1}/{min(len(messages), 10)}: {msg_id}")
                     
-                    subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
-                    sender = next((h['value'] for h in headers if h['name'] == 'From'), 'Unknown Sender')
-                    snippet = msg_data.get('snippet', '')
+                    msg_response = requests.get(
+                        f'https://gmail.googleapis.com/gmail/v1/users/me/messages/{msg_id}',
+                        headers=headers
+                    )
                     
-                    emails.append({
-                        'id': msg_id,
-                        'subject': subject,
-                        'sender': sender,
-                        'snippet': snippet
-                    })
+                    if msg_response.status_code == 200:
+                        msg_data = msg_response.json()
+                        payload = msg_data.get('payload', {})
+                        headers = payload.get('headers', [])
+                        
+                        subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
+                        sender = next((h['value'] for h in headers if h['name'] == 'From'), 'Unknown Sender')
+                        snippet = msg_data.get('snippet', '')
+                        
+                        emails.append({
+                            'id': msg_id,
+                            'subject': subject,
+                            'sender': sender,
+                            'snippet': snippet
+                        })
+                        
+                        print(f"  - Subject: {subject[:50]}...")
+                        print(f"  - From: {sender}")
+                    else:
+                        print(f"  - Failed to get message details: {msg_response.status_code}")
+                        
+                except Exception as e:
+                    print(f"  - Error processing message {msg_id}: {e}")
+                    continue
             
+            print(f"Successfully processed {len(emails)} emails")
             return emails
+            
+        elif response.status_code == 401:
+            print("Gmail API: Unauthorized - token may be expired or invalid")
+            return None
+        elif response.status_code == 403:
+            print("Gmail API: Forbidden - insufficient permissions")
+            return None
         else:
             print(f"Gmail API error: {response.status_code} - {response.text}")
             return None

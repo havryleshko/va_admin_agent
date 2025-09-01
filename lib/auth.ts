@@ -1,5 +1,3 @@
-import { supabase } from './supabase'
-
 export interface GoogleTokens {
   access_token: string
   refresh_token?: string
@@ -11,57 +9,82 @@ export interface AuthTokens {
   google_tokens: GoogleTokens
 }
 
-// Get Google OAuth tokens from Supabase session
-export function getGoogleTokensFromSupabaseSession(session: any): GoogleTokens | null {
+// Get Google OAuth tokens from URL parameters (after OAuth callback)
+export function getGoogleTokensFromUrl(): GoogleTokens | null {
   try {
-    if (!session?.provider_token) {
-      console.log('🔍 AUTH DEBUG: No provider token in Supabase session')
+    const urlParams = new URLSearchParams(window.location.search)
+    const accessToken = urlParams.get('google_access_token')
+    const refreshToken = urlParams.get('google_refresh_token')
+    const expiresIn = urlParams.get('expires_in')
+    
+    if (!accessToken) {
+      console.log('🔍 AUTH DEBUG: No Google access token in URL')
       return null
     }
-
-    // Supabase stores the Google OAuth token in provider_token
-    // But we need to verify this actually works with Gmail API
+    
+    const expiresAt = Date.now() + (parseInt(expiresIn || '3600') * 1000)
+    
     const tokens: GoogleTokens = {
-      access_token: session.provider_token,
-      expires_at: Date.now() + (3600 * 1000), // Assume 1 hour
+      access_token: accessToken,
+      refresh_token: refreshToken || undefined,
+      expires_at: expiresAt
     }
-
-    console.log('🔍 AUTH DEBUG: Extracted Google tokens from Supabase session')
+    
+    console.log('🔍 AUTH DEBUG: Extracted Google tokens from URL')
     return tokens
   } catch (error) {
-    console.error('❌ AUTH DEBUG: Error extracting Google tokens:', error)
+    console.error('❌ AUTH DEBUG: Error extracting Google tokens from URL:', error)
     return null
   }
 }
 
-// Get current Supabase session
-export async function getSupabaseSession() {
+// Store Google tokens in localStorage
+export function storeGoogleTokens(tokens: GoogleTokens): void {
   try {
-    const { data: { session }, error } = await supabase.auth.getSession()
-    if (error) throw error
-    return session
+    localStorage.setItem('google_tokens', JSON.stringify(tokens))
+    console.log('🔍 AUTH DEBUG: Stored Google tokens in localStorage')
   } catch (error) {
-    console.error('Error getting Supabase session:', error)
+    console.error('❌ AUTH DEBUG: Error storing Google tokens:', error)
+  }
+}
+
+// Get stored Google tokens
+export function getStoredGoogleTokens(): GoogleTokens | null {
+  try {
+    const stored = localStorage.getItem('google_tokens')
+    if (!stored) return null
+    
+    const tokens = JSON.parse(stored) as GoogleTokens
+    
+    // Check if tokens are expired
+    if (Date.now() > tokens.expires_at) {
+      localStorage.removeItem('google_tokens')
+      console.log('🔍 AUTH DEBUG: Google tokens expired, removed from storage')
+      return null
+    }
+    
+    console.log('🔍 AUTH DEBUG: Retrieved stored Google tokens')
+    return tokens
+  } catch (error) {
+    console.error('❌ AUTH DEBUG: Error getting stored Google tokens:', error)
     return null
   }
 }
 
-// Get current user
-export async function getCurrentUser() {
+// Clear stored Google tokens
+export function clearGoogleTokens(): void {
   try {
-    const { data: { user }, error } = await supabase.auth.getUser()
-    if (error) throw error
-    return user
+    localStorage.removeItem('google_tokens')
+    console.log('🔍 AUTH DEBUG: Cleared Google tokens from storage')
   } catch (error) {
-    console.error('Error getting current user:', error)
-    return null
+    console.error('❌ AUTH DEBUG: Error clearing Google tokens:', error)
   }
 }
 
 // Sign out and clear all tokens
 export async function signOut() {
   try {
-    await supabase.auth.signOut()
+    clearGoogleTokens()
   } catch (error) {
     console.error('Error signing out:', error)
   }

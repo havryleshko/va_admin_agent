@@ -1,147 +1,124 @@
-# VA Admin Agent - Frontend
+# VA Admin Agent
 
-A modern Next.js frontend for the VA Admin Agent, an AI-powered email management system.
+An AI-powered email management assistant that helps you classify, categorize, and draft replies to your emails using OpenAI's GPT-4.
 
 ## Features
 
-- 🔐 **Gmail OAuth Authentication**: Secure login with Google accounts
-- 📧 **Email Management**: View and manage unread emails from Gmail
-- 🤖 **AI Classification**: Automatically categorize emails using OpenAI
-- ✍️ **AI Draft Replies**: Generate contextual email responses
-- 📊 **Dashboard Stats**: Overview of email metrics
-- 🎨 **Modern UI**: Clean, responsive design with Tailwind CSS
-- ⚡ **Real-time Updates**: Live email status and actions
-- 🛡️ **Protected Routes**: Secure access to email management features
+- 🔐 **Google OAuth Authentication** - Secure access to your Gmail account
+- 📧 **Real Email Integration** - Fetch and manage actual emails from Gmail
+- 🤖 **AI-Powered Classification** - Automatically categorize emails using GPT-4
+- ✍️ **Smart Reply Drafting** - Generate contextual email replies
+- 📊 **Email Analytics** - Track email statistics and trends
+- 🚀 **Modern UI** - Built with Next.js 14 and Tailwind CSS
 
-## Tech Stack
+## Architecture
 
-- **Framework**: Next.js 14 with App Router
-- **Language**: TypeScript
-- **Styling**: Tailwind CSS
-- **Icons**: Lucide React
-- **Date Handling**: date-fns
-- **Utilities**: clsx
+- **Frontend**: Next.js 14 with TypeScript and Tailwind CSS
+- **Backend**: Flask API with Gmail API integration
+- **Authentication**: Direct Google OAuth 2.0 flow
+- **AI**: OpenAI GPT-4 for email classification and reply generation
+- **Email Service**: Gmail API for real email access
 
-## Getting Started
+## Quick Start
 
 ### Prerequisites
 
-- Node.js 18+ 
-- npm or yarn
+1. **Google OAuth Setup**:
+   - Create a Google Cloud Project
+   - Enable Gmail API
+   - Create OAuth 2.0 credentials
+   - Add authorized redirect URIs
 
-### Installation
+2. **OpenAI API Key**:
+   - Get your API key from [OpenAI Platform](https://platform.openai.com/)
+
+### Frontend Setup
 
 1. **Install dependencies**:
    ```bash
    npm install
    ```
 
-2. **Run the development server**:
+2. **Environment variables**:
+   ```bash
+   cp env.example .env.local
+   ```
+   
+   Update `.env.local` with your credentials:
+   ```env
+   NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
+   GOOGLE_CLIENT_ID=your-google-client-id
+   GOOGLE_CLIENT_SECRET=your-google-client-secret
+   OPENAI_API_KEY=your-openai-api-key
+   ```
+
+3. **Run development server**:
    ```bash
    npm run dev
    ```
 
-3. **Open your browser**:
-   Navigate to [http://localhost:3000](http://localhost:3000)
+### Backend Setup
 
-### Building for Production
+1. **Navigate to backend directory**:
+   ```bash
+   cd backend
+   ```
 
-```bash
-npm run build
-npm start
-```
+2. **Install Python dependencies**:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-## Project Structure
+3. **Set environment variables**:
+   ```bash
+   export GOOGLE_CLIENT_ID="your-google-client-id"
+   export GOOGLE_CLIENT_SECRET="your-google-client-secret"
+   export OPENAI_API_KEY="your-openai-api-key"
+   ```
 
-```
-├── app/                    # Next.js App Router
-│   ├── globals.css        # Global styles
-│   ├── layout.tsx         # Root layout
-│   └── page.tsx           # Main page
-├── components/            # React components
-│   ├── EmailCard.tsx      # Email list item
-│   └── EmailDetail.tsx    # Email detail view
-├── types/                 # TypeScript types
-│   └── email.ts           # Email interfaces
-├── config/                # Configuration files
-└── public/                # Static assets
-```
+4. **Run Flask server**:
+   ```bash
+   python app.py
+   ```
 
-## Key Components
+## Usage
 
-### EmailCard
-Displays individual emails in the inbox list with:
-- Sender information
-- Subject and snippet
-- AI classification badge
-- Quick action buttons (Send/Discard)
-- Read/unread status
+1. **Sign In**: Click "Continue with Google" to authenticate
+2. **Grant Permissions**: Allow access to your Gmail account
+3. **View Emails**: See your unread emails automatically loaded
+4. **AI Classification**: Emails are automatically categorized
+5. **Draft Replies**: Generate contextual replies using AI
+6. **Send/Discard**: Choose to send replies or discard emails
 
-### EmailDetail
-Shows detailed email information including:
-- Full email content
-- AI-generated draft reply
-- Timestamp and metadata
-- Action buttons for sending or discarding
+## API Endpoints
 
-## Data Flow
+- `POST /api/emails` - Fetch unread emails
+- `POST /api/emails/classify` - Classify emails using AI
+- `POST /api/emails/draft-replies` - Generate draft replies
+- `POST /api/emails/send` - Send email replies
+- `POST /api/emails/discard` - Discard emails
+- `GET /api/emails/stats` - Get email statistics
 
-1. **Email Fetching**: Backend fetches unread emails from Gmail API
-2. **AI Classification**: Each email is categorized using OpenAI
-3. **Draft Generation**: AI creates contextual reply drafts
-4. **Frontend Display**: Emails are displayed with categories and drafts
-5. **User Actions**: Users can send replies or discard emails
+## Security
 
-## Integration with Backend
-
-The frontend is designed to work with the Python backend that provides:
-- Gmail OAuth integration
-- OpenAI API for email classification and reply drafting
-- Email sending capabilities
-- Queue management
+- Uses Google OAuth 2.0 for secure authentication
+- Tokens are stored locally and never shared
+- All API calls require valid Google access tokens
+- No email content is stored permanently
 
 ## Deployment
 
-### Vercel (Recommended)
-1. Push code to GitHub
-2. Connect repository to Vercel
-3. Deploy automatically
-
-### Other Platforms
-- **Netlify**: Use `npm run build` and deploy `out` directory
-- **Railway**: Connect GitHub repository
-- **AWS Amplify**: Connect repository and build
-
-## Environment Variables
-
-Create a `.env.local` file for local development:
-
-```env
-# Frontend Environment Variables
-NEXT_PUBLIC_API_URL=http://localhost:8000
-
-# Backend API Configuration
-NEXT_PUBLIC_BACKEND_URL=http://localhost:5000
-
-# Google OAuth Configuration
-NEXT_PUBLIC_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
-GOOGLE_CLIENT_SECRET=your-google-client-secret
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Optional: Analytics
-NEXT_PUBLIC_GA_ID=your-google-analytics-id
+### Frontend (Vercel)
+```bash
+npm run build
+vercel --prod
 ```
 
-### Setting up Google OAuth
-
-1. Go to [Google Cloud Console](https://console.cloud.google.com/)
-2. Create a new project or select existing one
-3. Enable Gmail API
-4. Create OAuth 2.0 credentials
-5. Add authorized redirect URIs:
-   - `http://localhost:3000/api/auth/callback` (for development)
-   - `https://yourdomain.com/api/auth/callback` (for production)
-6. Copy Client ID and Client Secret to your `.env.local` file
+### Backend (Render/Railway)
+1. Push your code to GitHub
+2. Connect your repository to Render/Railway
+3. Set environment variables
+4. Deploy
 
 ## Contributing
 
