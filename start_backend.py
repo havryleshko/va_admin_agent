@@ -14,9 +14,18 @@ sys.path.insert(0, backend_dir)
 # Change to backend directory
 os.chdir(backend_dir)
 
-# Import and run the Flask app
-from app import app
+# Now import the Flask app from the backend directory
+try:
+    from app import app
+    print(f"Successfully imported Flask app from {os.getcwd()}")
+except ImportError as e:
+    print(f"Import error: {e}")
+    print(f"Current working directory: {os.getcwd()}")
+    print(f"Python path: {sys.path}")
+    print(f"Files in current directory: {os.listdir('.')}")
+    sys.exit(1)
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
+    print(f"Starting Flask app on port {port}")
     app.run(host='0.0.0.0', port=port, debug=False)
