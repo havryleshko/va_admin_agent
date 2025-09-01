@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET
+// Use the environment variable names that the user already has configured
+const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
+const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || process.env.NEXT_PUBLIC_GOOGLE_CLIENT_SECRET
 const REDIRECT_URI = process.env.NEXT_PUBLIC_APP_URL + '/api/auth/google/callback'
 
 export async function GET(request: NextRequest) {
@@ -15,15 +16,16 @@ export async function GET(request: NextRequest) {
     // Check if required environment variables are set
     if (!GOOGLE_CLIENT_ID) {
       console.error('❌ OAUTH ERROR: GOOGLE_CLIENT_ID is not set')
+      console.error('❌ OAUTH ERROR: Available env vars:', Object.keys(process.env).filter(key => key.includes('GOOGLE')))
       return NextResponse.json({ 
-        error: 'Google OAuth not configured. GOOGLE_CLIENT_ID is missing.' 
+        error: 'Google OAuth not configured. GOOGLE_CLIENT_ID is missing. Please check your environment variables.' 
       }, { status: 500 })
     }
     
     if (!GOOGLE_CLIENT_SECRET) {
       console.error('❌ OAUTH ERROR: GOOGLE_CLIENT_SECRET is not set')
       return NextResponse.json({ 
-        error: 'Google OAuth not configured. GOOGLE_CLIENT_SECRET is missing.' 
+        error: 'Google OAuth not configured. GOOGLE_CLIENT_SECRET is missing. Please check your environment variables.' 
       }, { status: 500 })
     }
     

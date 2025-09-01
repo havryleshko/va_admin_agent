@@ -2,16 +2,25 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext'
 import { Mail, Send, Trash2, RefreshCw, User, Clock, Tag, LogOut, AlertCircle } from 'lucide-react'
 import EmailCard from '@/components/EmailCard'
 import EmailDetail from '@/components/EmailDetail'
 import { Email } from '@/types/email'
 import { fetchEmails, classifyEmails, generateDraftReplies, sendEmailReply, discardEmail, getEmailStats, EmailStats } from '@/lib/api'
-import { getGoogleTokensFromUrl, storeGoogleTokens, getStoredGoogleTokens, GoogleTokens } from '@/lib/auth'
+import { GoogleTokens } from '@/lib/auth'
 
 export default function DashboardPage() {
+  const { user, session, isLoading, signOut } = useSupabaseAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
+
+  // Redirect to login if not authenticated
+  useEffect(() => {
+    if (!isLoading && !user) {
+      router.push('/login')
+    }
+  }, [isLoading, user, router])
 
   const [emails, setEmails] = useState<Email[]>([])
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
@@ -19,52 +28,41 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>('')
   const [googleTokens, setGoogleTokens] = useState<GoogleTokens | null>(null)
-  const [userEmail, setUserEmail] = useState<string>('')
   const [stats, setStats] = useState<EmailStats>({
     total: 0,
     unread: 0,
     categorized: 0
   })
 
-  // Check for Google tokens in URL and store them
+  // Extract Google tokens from Supabase session
   useEffect(() => {
-    const tokens = getGoogleTokensFromUrl()
-    if (tokens) {
-      console.log('🔍 AUTH DEBUG: Found Google tokens in URL, storing them...')
-      storeGoogleTokens(tokens)
-      setGoogleTokens(tokens)
-      setDebugInfo('Google tokens found and stored')
+    if (session?.provider_token) {
+      console.log('🔍 AUTH DEBUG: Found provider token in Supabase session')
       
-      // Clean up URL
-      const url = new URL(window.location.href)
-      url.search = ''
-      window.history.replaceState({}, '', url.toString())
-    } else {
-      // Try to get stored tokens
-      const storedTokens = getStoredGoogleTokens()
-      if (storedTokens) {
-        console.log('🔍 AUTH DEBUG: Using stored Google tokens')
-        setGoogleTokens(storedTokens)
-        setDebugInfo('Using stored Google tokens')
-      } else {
-        console.log('🔍 AUTH DEBUG: No Google tokens found')
-        setDebugInfo('No Google tokens found - need to re-authenticate')
-        // Redirect to login if no tokens
-        router.push('/login')
-        return
+      // Supabase provides the Google OAuth token in provider_token
+      const tokens: GoogleTokens = {
+        access_token: session.provider_token,
+        expires_at: Date.now() + (3600 * 1000), // 1 hour from now
       }
+      
+      setGoogleTokens(tokens)
+      setDebugInfo('Google tokens extracted from Supabase session')
+    } else {
+      console.log('🔍 AUTH DEBUG: No provider token found in session')
+      setDebugInfo('No Google tokens found in Supabase session')
     }
-  }, [router])
+  }, [session])
 
-  // Load real email data when we have Google tokens
+  // Load real email data when user is authenticated and has Google tokens
   useEffect(() => {
-    if (googleTokens) {
-      console.log('🔍 DEBUG: Google tokens available, loading emails...')
+    if (user && session && googleTokens) {
+      console.log('🔍 DEBUG: User authenticated with Google tokens, loading emails...')
+      console.log('🔍 DEBUG: Session:', session)
       console.log('🔍 DEBUG: Google tokens available:', !!googleTokens)
       console.log('🔍 DEBUG: API Base URL:', process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set')
       loadEmails()
     }
-  }, [googleTokens])
+  }, [user, session, googleTokens])
 
   const loadEmails = async () => {
     if (!googleTokens) {
@@ -164,17 +162,20 @@ export default function DashboardPage() {
   }
 
   const handleLogout = async () => {
-    // Clear Google tokens and redirect to login
-    localStorage.removeItem('google_tokens')
+    await signOut()
     router.push('/login')
   }
 
-  if (!googleTokens) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
       </div>
     )
+  }
+
+  if (!user) {
+    return null
   }
 
   return (
@@ -189,7 +190,14 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">{userEmail || 'Google User'}</span>
+                {user?.user_metadata?.avatar_url && (
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt={user.user_metadata?.full_name || user.email}
+                    className="h-8 w-8 rounded-full"
+                  />
+                )}
+                <span className="text-sm text-gray-700">{user?.user_metadata?.full_name || user?.email}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -209,7 +217,9 @@ export default function DashboardPage() {
           <h3 className="text-sm font-medium text-blue-800 mb-2">🔍 Debug Information</h3>
           <div className="text-sm text-blue-700 space-y-1">
             <p><strong>API Base URL:</strong> {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
-            <p><strong>User Email:</strong> {userEmail || 'Not set'}</p>
+            <p><strong>User Email:</strong> {user?.email || 'None'}</p>
+            <p><strong>Supabase Session:</strong> {session ? 'Active' : 'None'}</p>
+            <p><strong>Provider Token:</strong> {session?.provider_token ? 'Available' : 'Missing'}</p>
             <p><strong>Google Tokens:</strong> {googleTokens ? 'Available' : 'Missing'}</p>
             <p><strong>Debug Info:</strong> {debugInfo}</p>
           </div>

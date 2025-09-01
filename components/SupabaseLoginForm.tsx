@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function SupabaseLoginForm() {
@@ -13,26 +14,34 @@ export default function SupabaseLoginForm() {
     setError(null)
     
     try {
-      console.log('🔍 AUTH DEBUG: Starting Google OAuth flow...')
+      console.log('🔍 AUTH DEBUG: Starting Supabase Google OAuth flow...')
       
-      // Use our server-side OAuth flow
-      const response = await fetch('/api/auth/google')
-      
-      if (response.ok) {
-        // The response will redirect to Google OAuth
-        // We don't need to handle the redirect manually
-        console.log('🔍 AUTH DEBUG: OAuth flow initiated')
-      } else {
-        // Get the error message from the response
-        const errorData = await response.json()
-        console.error('❌ AUTH DEBUG: OAuth flow failed:', errorData)
-        throw new Error(errorData.error || 'Failed to initiate OAuth flow')
+      // Use Supabase OAuth (which was working before)
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent'
+          }
+        }
+      })
+
+      if (error) {
+        console.error('❌ AUTH DEBUG: Supabase OAuth error:', error)
+        setError(error.message)
+        return
       }
+
+      console.log('🔍 AUTH DEBUG: OAuth flow initiated:', data)
+      
+      // The redirect will happen automatically
+      // We'll handle the token exchange in the dashboard
       
     } catch (err) {
       console.error('❌ AUTH DEBUG: Unexpected error:', err)
-      const errorMessage = err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.'
-      setError(errorMessage)
+      setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)
     }
@@ -62,7 +71,7 @@ export default function SupabaseLoginForm() {
                     {error}
                   </div>
                   <div className="mt-2 text-xs text-red-600">
-                    Please check that your environment variables are configured correctly.
+                    This uses Supabase OAuth which should work with your existing setup.
                   </div>
                 </div>
               </div>
