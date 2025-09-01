@@ -21,6 +21,8 @@ export async function fetchEmails(googleTokens: GoogleTokens): Promise<Email[]> 
     console.log('🔍 API DEBUG: fetchEmails called')
     console.log('🔍 API DEBUG: API_BASE_URL:', API_BASE_URL)
     console.log('🔍 API DEBUG: Google tokens available:', !!googleTokens)
+    console.log('🔍 API DEBUG: Token length:', googleTokens.access_token?.length || 0)
+    console.log('🔍 API DEBUG: Token preview:', googleTokens.access_token?.substring(0, 20) + '...')
     
     const url = `${API_BASE_URL}/api/emails`
     console.log('🔍 API DEBUG: Making request to:', url)
@@ -42,7 +44,15 @@ export async function fetchEmails(googleTokens: GoogleTokens): Promise<Email[]> 
     if (!response.ok) {
       const errorText = await response.text()
       console.log('❌ API DEBUG: Response not ok:', errorText)
-      throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`)
+      
+      // Check if it's a token-related error
+      if (response.status === 401) {
+        throw new Error('Invalid or expired Google OAuth token. Please re-authenticate.')
+      } else if (response.status === 403) {
+        throw new Error('Insufficient permissions to access Gmail. Please check OAuth scopes.')
+      } else {
+        throw new Error(`HTTP error! status: ${response.status}, body: ${errorText}`)
+      }
     }
 
     const result = await response.json()

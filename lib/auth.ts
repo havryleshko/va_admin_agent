@@ -14,22 +14,74 @@ export interface AuthTokens {
 // Get Google OAuth tokens from Supabase session
 export function getGoogleTokensFromSupabaseSession(session: any): GoogleTokens | null {
   try {
-    if (!session?.provider_token) {
-      console.log('🔍 AUTH DEBUG: No provider token in Supabase session')
+    console.log('🔍 AUTH DEBUG: Full session object:', session)
+    console.log('🔍 AUTH DEBUG: Provider token:', session?.provider_token)
+    console.log('🔍 AUTH DEBUG: Access token:', session?.access_token)
+    console.log('🔍 AUTH DEBUG: Provider access token:', session?.provider_access_token)
+    
+    // Try different possible locations for Google OAuth tokens
+    let accessToken = null
+    
+    // Method 1: Check provider_token (most common)
+    if (session?.provider_token) {
+      accessToken = session.provider_token
+      console.log('🔍 AUTH DEBUG: Found token in provider_token')
+    }
+    // Method 2: Check provider_access_token
+    else if (session?.provider_access_token) {
+      accessToken = session.provider_access_token
+      console.log('🔍 AUTH DEBUG: Found token in provider_access_token')
+    }
+    // Method 3: Check if access_token is a Google token
+    else if (session?.access_token) {
+      accessToken = session.access_token
+      console.log('🔍 AUTH DEBUG: Using access_token as Google token')
+    }
+    
+    if (!accessToken) {
+      console.log('❌ AUTH DEBUG: No Google access token found in session')
+      console.log('🔍 AUTH DEBUG: Available session keys:', Object.keys(session || {}))
       return null
     }
 
-    // Supabase stores the Google OAuth token in provider_token
-    // This should work with Gmail API
+    // Create tokens object
     const tokens: GoogleTokens = {
-      access_token: session.provider_token,
+      access_token: accessToken,
       expires_at: Date.now() + (3600 * 1000), // Assume 1 hour
     }
 
-    console.log('🔍 AUTH DEBUG: Extracted Google tokens from Supabase session')
+    console.log('🔍 AUTH DEBUG: Successfully extracted Google tokens from Supabase session')
     return tokens
   } catch (error) {
     console.error('❌ AUTH DEBUG: Error extracting Google tokens:', error)
+    return null
+  }
+}
+
+// Alternative method: Get tokens from user metadata
+export function getGoogleTokensFromUserMetadata(user: any): GoogleTokens | null {
+  try {
+    if (!user?.user_metadata) {
+      console.log('🔍 AUTH DEBUG: No user metadata available')
+      return null
+    }
+
+    console.log('🔍 AUTH DEBUG: User metadata:', user.user_metadata)
+    
+    // Check if Google tokens are stored in user metadata
+    const metadata = user.user_metadata
+    
+    if (metadata.google_access_token) {
+      console.log('🔍 AUTH DEBUG: Found Google token in user metadata')
+      return {
+        access_token: metadata.google_access_token,
+        expires_at: Date.now() + (3600 * 1000),
+      }
+    }
+    
+    return null
+  } catch (error) {
+    console.error('❌ AUTH DEBUG: Error extracting tokens from user metadata:', error)
     return null
   }
 }

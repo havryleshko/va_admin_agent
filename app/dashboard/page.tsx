@@ -8,7 +8,7 @@ import EmailCard from '@/components/EmailCard'
 import EmailDetail from '@/components/EmailDetail'
 import { Email } from '@/types/email'
 import { fetchEmails, classifyEmails, generateDraftReplies, sendEmailReply, discardEmail, getEmailStats, EmailStats } from '@/lib/api'
-import { GoogleTokens, getGoogleTokensFromSupabaseSession } from '@/lib/auth'
+import { GoogleTokens, getGoogleTokensFromSupabaseSession, getGoogleTokensFromUserMetadata } from '@/lib/auth'
 
 export default function DashboardPage() {
   const { user, session, isLoading, signOut } = useSupabaseAuth()
@@ -35,19 +35,31 @@ export default function DashboardPage() {
 
   // Extract Google tokens from Supabase session
   useEffect(() => {
-    if (session) {
+    if (session || user) {
       console.log('🔍 AUTH DEBUG: Supabase session available:', session)
-      console.log('🔍 AUTH DEBUG: Provider token:', session.provider_token ? 'Available' : 'Missing')
+      console.log('🔍 AUTH DEBUG: User available:', user)
       
-      const tokens = getGoogleTokensFromSupabaseSession(session)
+      // Try to get tokens from session first
+      let tokens = null
+      if (session) {
+        tokens = getGoogleTokensFromSupabaseSession(session)
+      }
+      
+      // If no tokens from session, try user metadata
+      if (!tokens && user) {
+        console.log('🔍 AUTH DEBUG: Trying to get tokens from user metadata...')
+        tokens = getGoogleTokensFromUserMetadata(user)
+      }
+      
       if (tokens) {
         setGoogleTokens(tokens)
-        setDebugInfo('Google tokens extracted from Supabase session')
+        setDebugInfo('Google tokens extracted successfully')
       } else {
-        setDebugInfo('No Google tokens found in Supabase session - may need to re-authenticate')
+        setDebugInfo('No Google tokens found - may need to re-authenticate with proper Gmail scopes')
+        console.log('❌ AUTH DEBUG: No Google tokens found in any location')
       }
     }
-  }, [session])
+  }, [session, user])
 
   // Load real email data when user is authenticated and has Google tokens
   useEffect(() => {
@@ -162,6 +174,18 @@ export default function DashboardPage() {
     router.push('/login')
   }
 
+  const handleDebugTokens = async () => {
+    try {
+      const response = await fetch('/api/debug-tokens')
+      const data = await response.json()
+      console.log('🔍 DEBUG TOKENS:', data)
+      setDebugInfo(`Debug info logged to console. Check browser console for details.`)
+    } catch (error) {
+      console.error('Debug error:', error)
+      setDebugInfo(`Debug error: ${error}`)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -210,14 +234,24 @@ export default function DashboardPage() {
       {/* Debug Information */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <h3 className="text-sm font-medium text-blue-800 mb-2">🔍 Debug Information</h3>
-          <div className="text-sm text-blue-700 space-y-1">
-            <p><strong>API Base URL:</strong> {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
-            <p><strong>User Email:</strong> {user?.email || 'None'}</p>
-            <p><strong>Supabase Session:</strong> {session ? 'Active' : 'None'}</p>
-            <p><strong>Provider Token:</strong> {session?.provider_token ? 'Available' : 'Missing'}</p>
-            <p><strong>Google Tokens:</strong> {googleTokens ? 'Available' : 'Missing'}</p>
-            <p><strong>Debug Info:</strong> {debugInfo}</p>
+          <div className="flex justify-between items-start">
+            <div>
+              <h3 className="text-sm font-medium text-blue-800 mb-2">🔍 Debug Information</h3>
+              <div className="text-sm text-blue-700 space-y-1">
+                <p><strong>API Base URL:</strong> {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
+                <p><strong>User Email:</strong> {user?.email || 'None'}</p>
+                <p><strong>Supabase Session:</strong> {session ? 'Active' : 'None'}</p>
+                <p><strong>Provider Token:</strong> {session?.provider_token ? 'Available' : 'Missing'}</p>
+                <p><strong>Google Tokens:</strong> {googleTokens ? 'Available' : 'Missing'}</p>
+                <p><strong>Debug Info:</strong> {debugInfo}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleDebugTokens}
+              className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+            >
+              Debug Tokens
+            </button>
           </div>
         </div>
       </div>
