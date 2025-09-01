@@ -6,14 +6,12 @@ import os
 from dotenv import load_dotenv
 import json
 from datetime import datetime
+import requests
 
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
-
-# Mock credentials storage (in production, use proper session management)
-credentials_store = {}
 
 @app.route('/')
 def health_check():
@@ -51,24 +49,26 @@ def handle_emails():
         
         if action == 'fetch_unread':
             try:
-                # Try to use real Gmail API with the access token
-                # Convert Supabase access token to Gmail credentials
-                credentials = convert_token_to_credentials(access_token)
-                if credentials:
-                    # Use real Gmail API
-                    real_emails = get_unread_emails(credentials)
+                # Supabase provides Google OAuth tokens directly
+                # The access_token from Supabase should work with Gmail API
+                print(f"Attempting Gmail API call with Supabase token: {access_token[:20]}...")
+                
+                # Try to fetch emails using the Supabase Google OAuth token
+                real_emails = fetch_emails_with_supabase_token(access_token)
+                if real_emails:
                     # Convert to expected format
                     formatted_emails = format_emails_for_frontend(real_emails)
-                    return jsonify({'emails': formatted_emails, 'source': 'gmail_api'})
+                    return jsonify({'emails': formatted_emails, 'source': 'supabase_gmail'})
                 else:
-                    # Fallback to mock emails if credentials conversion fails
-                    print("Using mock emails - credentials conversion failed")
+                    # Fallback to mock emails if Gmail API fails
+                    print("Gmail API failed, using mock emails")
                     emails = get_mock_emails()
-                    return jsonify({'emails': emails, 'source': 'mock'})
+                    return jsonify({'emails': emails, 'source': 'mock_fallback'})
+                    
             except Exception as e:
                 print(f"Gmail API error: {e}, falling back to mock emails")
                 emails = get_mock_emails()
-                return jsonify({'emails': emails, 'source': 'mock', 'error': str(e)})
+                return jsonify({'emails': emails, 'source': 'mock_error', 'error': str(e)})
         
         return jsonify({'error': 'Invalid action'}), 400
         
@@ -164,18 +164,64 @@ def get_email_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-def convert_token_to_credentials(access_token):
+def fetch_emails_with_supabase_token(access_token):
     """
-    Convert Supabase access token to Gmail API credentials.
-    This is a placeholder - you'll need to implement proper OAuth flow.
+    Fetch emails using Supabase's Google OAuth token directly.
+    Supabase handles the OAuth flow, so we can use the token directly.
     """
     try:
-        # For now, return None to trigger mock emails
-        # In production, you'd exchange the token for Gmail API credentials
-        print(f"Token conversion not implemented yet. Token: {access_token[:20]}...")
-        return None
+        # The access_token from Supabase should be a Google OAuth token
+        # that can be used directly with Gmail API
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Content-Type': 'application/json'
+        }
+        
+        # Try to fetch emails from Gmail API directly
+        gmail_url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages'
+        params = {
+            'q': 'is:unread',
+            'maxResults': 25
+        }
+        
+        response = requests.get(gmail_url, headers=headers, params=params)
+        
+        if response.status_code == 200:
+            print("Successfully fetched emails from Gmail API!")
+            gmail_data = response.json()
+            messages = gmail_data.get('messages', [])
+            
+            # Process each message to get full details
+            emails = []
+            for msg in messages[:10]:  # Limit to 10 for now
+                msg_id = msg['id']
+                msg_response = requests.get(
+                    f'https://gmail.googleapis.com/gmail/v1/users/me/messages/{msg_id}',
+                    headers=headers
+                )
+                
+                if msg_response.status_code == 200:
+                    msg_data = msg_response.json()
+                    headers = msg_data['payload'].get('headers', [])
+                    
+                    subject = next((h['value'] for h in headers if h['name'] == 'Subject'), 'No Subject')
+                    sender = next((h['value'] for h in headers if h['name'] == 'From'), 'Unknown Sender')
+                    snippet = msg_data.get('snippet', '')
+                    
+                    emails.append({
+                        'id': msg_id,
+                        'subject': subject,
+                        'sender': sender,
+                        'snippet': snippet
+                    })
+            
+            return emails
+        else:
+            print(f"Gmail API error: {response.status_code} - {response.text}")
+            return None
+            
     except Exception as e:
-        print(f"Token conversion error: {e}")
+        print(f"Error fetching emails with Supabase token: {e}")
         return None
 
 def format_emails_for_frontend(emails):
@@ -216,6 +262,7 @@ def get_mock_emails():
             'snippet': 'Hi, I would like to schedule a meeting to discuss our Q4 planning and strategy.',
             'category': 'Meeting',
             'draftReply': 'Sounds great! I\'m available this week. What time works best for you?',
+            'instructions': 'I\'d be happy to schedule a call to discuss how we can help.',
             'isRead': False,
             'timestamp': datetime.now().isoformat()
         },
