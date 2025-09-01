@@ -42,23 +42,21 @@ def handle_emails():
     try:
         data = request.get_json()
         action = data.get('action')
-        access_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        google_access_token = request.headers.get('X-Google-Access-Token')
         
-        if not access_token:
-            return jsonify({'error': 'No access token provided'}), 401
+        if not google_access_token:
+            return jsonify({'error': 'No Google access token provided'}), 401
         
         if action == 'fetch_unread':
             try:
-                # Supabase provides Google OAuth tokens directly
-                # The access_token from Supabase should work with Gmail API
-                print(f"Attempting Gmail API call with Supabase token: {access_token[:20]}...")
+                print(f"Attempting Gmail API call with Google token...")
                 
-                # Try to fetch emails using the Supabase Google OAuth token
-                real_emails = fetch_emails_with_supabase_token(access_token)
+                # Try to fetch emails using the actual Google OAuth token
+                real_emails = fetch_emails_with_google_token(google_access_token)
                 if real_emails:
                     # Convert to expected format
                     formatted_emails = format_emails_for_frontend(real_emails)
-                    return jsonify({'emails': formatted_emails, 'source': 'supabase_gmail'})
+                    return jsonify({'emails': formatted_emails, 'source': 'google_gmail'})
                 else:
                     # Fallback to mock emails if Gmail API fails
                     print("Gmail API failed, using mock emails")
@@ -80,10 +78,10 @@ def classify_emails_endpoint():
     try:
         data = request.get_json()
         emails = data.get('emails', [])
-        access_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        google_access_token = request.headers.get('X-Google-Access-Token')
         
-        if not access_token:
-            return jsonify({'error': 'No access token provided'}), 401
+        if not google_access_token:
+            return jsonify({'error': 'No Google access token provided'}), 401
         
         # Classify emails using AI
         classified_emails = classify_emails(emails)
@@ -97,10 +95,10 @@ def draft_replies_endpoint():
     try:
         data = request.get_json()
         emails = data.get('emails', [])
-        access_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        google_access_token = request.headers.get('X-Google-Access-Token')
         
-        if not access_token:
-            return jsonify({'error': 'No access token provided'}), 401
+        if not google_access_token:
+            return jsonify({'error': 'No Google access token provided'}), 401
         
         # Generate draft replies
         emails_with_drafts = draft_replies(emails)
@@ -115,10 +113,10 @@ def send_email_endpoint():
         data = request.get_json()
         email_id = data.get('emailId')
         reply_text = data.get('replyText')
-        access_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        google_access_token = request.headers.get('X-Google-Access-Token')
         
-        if not access_token:
-            return jsonify({'error': 'No access token provided'}), 401
+        if not google_access_token:
+            return jsonify({'error': 'No Google access token provided'}), 401
         
         # For now, return success (in production, implement actual email sending)
         # send_email_service(credentials, to, subject, text)
@@ -132,10 +130,10 @@ def discard_email_endpoint():
     try:
         data = request.get_json()
         email_id = data.get('emailId')
-        access_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        google_access_token = request.headers.get('X-Google-Access-Token')
         
-        if not access_token:
-            return jsonify({'error': 'No access token provided'}), 401
+        if not google_access_token:
+            return jsonify({'error': 'No Google access token provided'}), 401
         
         # For now, return success (in production, implement actual email discarding)
         # discard_email(email_id)
@@ -147,10 +145,10 @@ def discard_email_endpoint():
 @app.route('/api/emails/stats', methods=['GET'])
 def get_email_stats():
     try:
-        access_token = request.headers.get('Authorization', '').replace('Bearer ', '')
+        google_access_token = request.headers.get('X-Google-Access-Token')
         
-        if not access_token:
-            return jsonify({'error': 'No access token provided'}), 401
+        if not google_access_token:
+            return jsonify({'error': 'No Google access token provided'}), 401
         
         # For now, return mock stats (in production, get real stats from Gmail API)
         stats = {
@@ -164,16 +162,13 @@ def get_email_stats():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-def fetch_emails_with_supabase_token(access_token):
+def fetch_emails_with_google_token(google_access_token):
     """
-    Fetch emails using Supabase's Google OAuth token directly.
-    Supabase handles the OAuth flow, so we can use the token directly.
+    Fetch emails using actual Google OAuth token.
     """
     try:
-        # The access_token from Supabase should be a Google OAuth token
-        # that can be used directly with Gmail API
         headers = {
-            'Authorization': f'Bearer {access_token}',
+            'Authorization': f'Bearer {google_access_token}',
             'Content-Type': 'application/json'
         }
         
@@ -221,7 +216,7 @@ def fetch_emails_with_supabase_token(access_token):
             return None
             
     except Exception as e:
-        print(f"Error fetching emails with Supabase token: {e}")
+        print(f"Error fetching emails with Google token: {e}")
         return None
 
 def format_emails_for_frontend(emails):
@@ -262,7 +257,6 @@ def get_mock_emails():
             'snippet': 'Hi, I would like to schedule a meeting to discuss our Q4 planning and strategy.',
             'category': 'Meeting',
             'draftReply': 'Sounds great! I\'m available this week. What time works best for you?',
-            'instructions': 'I\'d be happy to schedule a call to discuss how we can help.',
             'isRead': False,
             'timestamp': datetime.now().isoformat()
         },

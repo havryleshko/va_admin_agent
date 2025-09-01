@@ -2,53 +2,74 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useSupabaseAuth } from '@/contexts/SupabaseAuthContext'
 import { Mail, Send, Trash2, RefreshCw, User, Clock, Tag, LogOut, AlertCircle } from 'lucide-react'
 import EmailCard from '@/components/EmailCard'
 import EmailDetail from '@/components/EmailDetail'
 import { Email } from '@/types/email'
 import { fetchEmails, classifyEmails, generateDraftReplies, sendEmailReply, discardEmail, getEmailStats, EmailStats } from '@/lib/api'
+import { getGoogleTokensFromUrl, storeGoogleTokens, getStoredGoogleTokens, GoogleTokens } from '@/lib/auth'
 
 export default function DashboardPage() {
-  const { user, session, isLoading, signOut } = useSupabaseAuth()
   const router = useRouter()
   const searchParams = useSearchParams()
-
-  // Supabase handles OAuth callbacks automatically
-  // No need for manual OAuth callback handling
-
-  // Redirect to login if not authenticated
-  useEffect(() => {
-    if (!isLoading && !user) {
-      router.push('/login')
-    }
-  }, [isLoading, user, router])
 
   const [emails, setEmails] = useState<Email[]>([])
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [debugInfo, setDebugInfo] = useState<string>('')
+  const [googleTokens, setGoogleTokens] = useState<GoogleTokens | null>(null)
+  const [userEmail, setUserEmail] = useState<string>('')
   const [stats, setStats] = useState<EmailStats>({
     total: 0,
     unread: 0,
     categorized: 0
   })
 
-  // Load real email data when user is authenticated
+  // Check for Google tokens in URL and store them
   useEffect(() => {
-    if (user && session?.access_token) {
-      console.log('🔍 DEBUG: User authenticated, loading emails...')
-      console.log('🔍 DEBUG: Session access token:', session.access_token ? `${session.access_token.substring(0, 20)}...` : 'None')
+    const tokens = getGoogleTokensFromUrl()
+    if (tokens) {
+      console.log('🔍 AUTH DEBUG: Found Google tokens in URL, storing them...')
+      storeGoogleTokens(tokens)
+      setGoogleTokens(tokens)
+      setDebugInfo('Google tokens found and stored')
+      
+      // Clean up URL
+      const url = new URL(window.location.href)
+      url.search = ''
+      window.history.replaceState({}, '', url.toString())
+    } else {
+      // Try to get stored tokens
+      const storedTokens = getStoredGoogleTokens()
+      if (storedTokens) {
+        console.log('🔍 AUTH DEBUG: Using stored Google tokens')
+        setGoogleTokens(storedTokens)
+        setDebugInfo('Using stored Google tokens')
+      } else {
+        console.log('🔍 AUTH DEBUG: No Google tokens found')
+        setDebugInfo('No Google tokens found - need to re-authenticate')
+        // Redirect to login if no tokens
+        router.push('/login')
+        return
+      }
+    }
+  }, [router])
+
+  // Load real email data when we have Google tokens
+  useEffect(() => {
+    if (googleTokens) {
+      console.log('🔍 DEBUG: Google tokens available, loading emails...')
+      console.log('🔍 DEBUG: Google tokens available:', !!googleTokens)
       console.log('🔍 DEBUG: API Base URL:', process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set')
       loadEmails()
     }
-  }, [user, session])
+  }, [googleTokens])
 
   const loadEmails = async () => {
-    if (!session?.access_token) {
-      console.log('❌ DEBUG: No access token available')
-      setDebugInfo('No access token available')
+    if (!googleTokens) {
+      console.log('❌ DEBUG: Missing Google tokens')
+      setDebugInfo('Missing Google tokens - need to re-authenticate')
       return
     }
     
@@ -61,22 +82,22 @@ export default function DashboardPage() {
       console.log('🔍 DEBUG: API Base URL:', process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set')
       
       // Fetch unread emails from Gmail
-      const fetchedEmails = await fetchEmails(session.access_token)
+      const fetchedEmails = await fetchEmails(googleTokens)
       console.log('🔍 DEBUG: Fetched emails:', fetchedEmails)
       setDebugInfo(`Fetched ${fetchedEmails.length} emails`)
       
       // Classify emails using AI
-      const classifiedEmails = await classifyEmails(fetchedEmails, session.access_token)
+      const classifiedEmails = await classifyEmails(fetchedEmails, googleTokens)
       console.log('🔍 DEBUG: Classified emails:', classifiedEmails)
       
       // Generate draft replies
-      const emailsWithDrafts = await generateDraftReplies(classifiedEmails, session.access_token)
+      const emailsWithDrafts = await generateDraftReplies(classifiedEmails, googleTokens)
       console.log('🔍 DEBUG: Emails with drafts:', emailsWithDrafts)
       
       setEmails(emailsWithDrafts)
       
       // Update stats
-      const emailStats = await getEmailStats(session.access_token)
+      const emailStats = await getEmailStats(googleTokens)
       setStats(emailStats)
       
     } catch (err) {
@@ -93,13 +114,13 @@ export default function DashboardPage() {
   }
 
   const handleSendEmail = async (emailId: string) => {
-    if (!session?.access_token) return
+    if (!googleTokens) return
     
     try {
       const email = emails.find(e => e.id === emailId)
       if (!email?.draftReply) return
       
-      const success = await sendEmailReply(emailId, email.draftReply, session.access_token)
+      const success = await sendEmailReply(emailId, email.draftReply, googleTokens)
       
       if (success) {
         // Remove email from list after sending
@@ -108,7 +129,7 @@ export default function DashboardPage() {
           setSelectedEmail(null)
         }
         // Refresh stats
-        const emailStats = await getEmailStats(session.access_token)
+        const emailStats = await getEmailStats(googleTokens)
         setStats(emailStats)
       }
     } catch (err) {
@@ -118,10 +139,10 @@ export default function DashboardPage() {
   }
 
   const handleDiscardEmail = async (emailId: string) => {
-    if (!session?.access_token) return
+    if (!googleTokens) return
     
     try {
-      const success = await discardEmail(emailId, session.access_token)
+      const success = await discardEmail(emailId, googleTokens)
       
       if (success) {
         setEmails(prev => prev.filter(e => e.id !== emailId))
@@ -129,7 +150,7 @@ export default function DashboardPage() {
           setSelectedEmail(null)
         }
         // Refresh stats
-        const emailStats = await getEmailStats(session.access_token)
+        const emailStats = await getEmailStats(googleTokens)
         setStats(emailStats)
       }
     } catch (err) {
@@ -143,20 +164,17 @@ export default function DashboardPage() {
   }
 
   const handleLogout = async () => {
-    await signOut()
+    // Clear Google tokens and redirect to login
+    localStorage.removeItem('google_tokens')
     router.push('/login')
   }
 
-  if (isLoading) {
+  if (!googleTokens) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary-600"></div>
       </div>
     )
-  }
-
-  if (!user) {
-    return null
   }
 
   return (
@@ -171,14 +189,7 @@ export default function DashboardPage() {
             </div>
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
-                {user?.user_metadata?.avatar_url && (
-                  <img
-                    src={user.user_metadata.avatar_url}
-                    alt={user.user_metadata?.full_name || user.email}
-                    className="h-8 w-8 rounded-full"
-                  />
-                )}
-                <span className="text-sm text-gray-700">{user?.user_metadata?.full_name || user?.email}</span>
+                <span className="text-sm text-gray-700">{userEmail || 'Google User'}</span>
               </div>
               <button
                 onClick={handleLogout}
@@ -198,8 +209,8 @@ export default function DashboardPage() {
           <h3 className="text-sm font-medium text-blue-800 mb-2">🔍 Debug Information</h3>
           <div className="text-sm text-blue-700 space-y-1">
             <p><strong>API Base URL:</strong> {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
-            <p><strong>User Email:</strong> {user?.email || 'None'}</p>
-            <p><strong>Access Token:</strong> {session?.access_token ? `${session.access_token.substring(0, 20)}...` : 'None'}</p>
+            <p><strong>User Email:</strong> {userEmail || 'Not set'}</p>
+            <p><strong>Google Tokens:</strong> {googleTokens ? 'Available' : 'Missing'}</p>
             <p><strong>Debug Info:</strong> {debugInfo}</p>
           </div>
         </div>

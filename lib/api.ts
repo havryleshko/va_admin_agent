@@ -1,4 +1,5 @@
 import { Email } from '@/types/email'
+import { GoogleTokens } from './auth'
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
 
@@ -15,11 +16,11 @@ export interface ApiResponse<T> {
 }
 
 // Fetch unread emails from Gmail
-export async function fetchEmails(accessToken: string): Promise<Email[]> {
+export async function fetchEmails(googleTokens: GoogleTokens): Promise<Email[]> {
   try {
     console.log('🔍 API DEBUG: fetchEmails called')
     console.log('🔍 API DEBUG: API_BASE_URL:', API_BASE_URL)
-    console.log('🔍 API DEBUG: Access token:', accessToken ? `${accessToken.substring(0, 20)}...` : 'None')
+    console.log('🔍 API DEBUG: Google tokens available:', !!googleTokens)
     
     const url = `${API_BASE_URL}/api/emails`
     console.log('🔍 API DEBUG: Making request to:', url)
@@ -28,7 +29,7 @@ export async function fetchEmails(accessToken: string): Promise<Email[]> {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
+        'X-Google-Access-Token': googleTokens.access_token
       },
       body: JSON.stringify({
         action: 'fetch_unread'
@@ -57,7 +58,7 @@ export async function fetchEmails(accessToken: string): Promise<Email[]> {
 }
 
 // Classify emails using AI
-export async function classifyEmails(emails: Email[], accessToken: string): Promise<Email[]> {
+export async function classifyEmails(emails: Email[], googleTokens: GoogleTokens): Promise<Email[]> {
   try {
     console.log('🔍 API DEBUG: classifyEmails called with', emails.length, 'emails')
     
@@ -65,7 +66,7 @@ export async function classifyEmails(emails: Email[], accessToken: string): Prom
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
+        'X-Google-Access-Token': googleTokens.access_token
       },
       body: JSON.stringify({ emails })
     })
@@ -84,7 +85,7 @@ export async function classifyEmails(emails: Email[], accessToken: string): Prom
 }
 
 // Generate draft replies
-export async function generateDraftReplies(emails: Email[], accessToken: string): Promise<Email[]> {
+export async function generateDraftReplies(emails: Email[], googleTokens: GoogleTokens): Promise<Email[]> {
   try {
     console.log('🔍 API DEBUG: generateDraftReplies called with', emails.length, 'emails')
     
@@ -92,7 +93,7 @@ export async function generateDraftReplies(emails: Email[], accessToken: string)
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
+        'X-Google-Access-Token': googleTokens.access_token
       },
       body: JSON.stringify({ emails })
     })
@@ -111,7 +112,7 @@ export async function generateDraftReplies(emails: Email[], accessToken: string)
 }
 
 // Send email reply
-export async function sendEmailReply(emailId: string, replyText: string, accessToken: string): Promise<boolean> {
+export async function sendEmailReply(emailId: string, replyText: string, googleTokens: GoogleTokens): Promise<boolean> {
   try {
     console.log('🔍 API DEBUG: sendEmailReply called for email:', emailId)
     
@@ -119,7 +120,7 @@ export async function sendEmailReply(emailId: string, replyText: string, accessT
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
+        'X-Google-Access-Token': googleTokens.access_token
       },
       body: JSON.stringify({
         emailId,
@@ -141,7 +142,7 @@ export async function sendEmailReply(emailId: string, replyText: string, accessT
 }
 
 // Discard email
-export async function discardEmail(emailId: string, accessToken: string): Promise<boolean> {
+export async function discardEmail(emailId: string, googleTokens: GoogleTokens): Promise<boolean> {
   try {
     console.log('🔍 API DEBUG: discardEmail called for email:', emailId)
     
@@ -149,7 +150,7 @@ export async function discardEmail(emailId: string, accessToken: string): Promis
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`
+        'X-Google-Access-Token': googleTokens.access_token
       },
       body: JSON.stringify({ emailId })
     })
@@ -168,14 +169,14 @@ export async function discardEmail(emailId: string, accessToken: string): Promis
 }
 
 // Get email statistics
-export async function getEmailStats(accessToken: string): Promise<EmailStats> {
+export async function getEmailStats(googleTokens: GoogleTokens): Promise<EmailStats> {
   try {
     console.log('🔍 API DEBUG: getEmailStats called')
     
     const response = await fetch(`${API_BASE_URL}/api/emails/stats`, {
       method: 'GET',
       headers: {
-        'Authorization': `Bearer ${accessToken}`
+        'X-Google-Access-Token': googleTokens.access_token
       }
     })
 
