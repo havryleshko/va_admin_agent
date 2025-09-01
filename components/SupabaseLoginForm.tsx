@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { supabase } from '@/lib/supabase'
 import { useRouter } from 'next/navigation'
 
 export default function SupabaseLoginForm() {
@@ -13,17 +14,30 @@ export default function SupabaseLoginForm() {
     setError(null)
     
     try {
-      console.log('🔍 AUTH DEBUG: Starting real Google OAuth flow...')
+      console.log('🔍 AUTH DEBUG: Starting Supabase Google OAuth flow...')
       
-      // Use our real Google OAuth flow
-      const response = await fetch('/api/auth/google')
-      
-      if (response.ok) {
-        // The response will redirect to Google OAuth
-        console.log('🔍 AUTH DEBUG: OAuth flow initiated')
-      } else {
-        throw new Error('Failed to initiate OAuth flow')
+      // Use Supabase OAuth with proper scopes for Gmail
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+            scope: 'https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/userinfo.profile'
+          }
+        }
+      })
+
+      if (error) {
+        console.error('❌ AUTH DEBUG: Supabase OAuth error:', error)
+        setError(error.message)
+        return
       }
+
+      console.log('🔍 AUTH DEBUG: OAuth flow initiated:', data)
+      
+      // The redirect will happen automatically
       
     } catch (err) {
       console.error('❌ AUTH DEBUG: Unexpected error:', err)
@@ -57,7 +71,7 @@ export default function SupabaseLoginForm() {
                     {error}
                   </div>
                   <div className="mt-2 text-xs text-red-600">
-                    This uses real Google OAuth for Gmail access.
+                    This uses Supabase OAuth which should work with your existing setup.
                   </div>
                 </div>
               </div>
