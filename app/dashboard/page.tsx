@@ -28,6 +28,7 @@ export default function DashboardPage() {
   const [selectedEmail, setSelectedEmail] = useState<Email | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [debugInfo, setDebugInfo] = useState<string>('')
   const [stats, setStats] = useState<EmailStats>({
     total: 0,
     unread: 0,
@@ -37,25 +38,40 @@ export default function DashboardPage() {
   // Load real email data when user is authenticated
   useEffect(() => {
     if (user && session?.access_token) {
+      console.log('🔍 DEBUG: User authenticated, loading emails...')
+      console.log('🔍 DEBUG: Session access token:', session.access_token ? `${session.access_token.substring(0, 20)}...` : 'None')
+      console.log('🔍 DEBUG: API Base URL:', process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set')
       loadEmails()
     }
   }, [user, session])
 
   const loadEmails = async () => {
-    if (!session?.access_token) return
+    if (!session?.access_token) {
+      console.log('❌ DEBUG: No access token available')
+      setDebugInfo('No access token available')
+      return
+    }
     
     setLoading(true)
     setError(null)
+    setDebugInfo('Loading emails...')
     
     try {
+      console.log('🔍 DEBUG: Starting email fetch...')
+      console.log('🔍 DEBUG: API Base URL:', process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set')
+      
       // Fetch unread emails from Gmail
       const fetchedEmails = await fetchEmails(session.access_token)
+      console.log('🔍 DEBUG: Fetched emails:', fetchedEmails)
+      setDebugInfo(`Fetched ${fetchedEmails.length} emails`)
       
       // Classify emails using AI
       const classifiedEmails = await classifyEmails(fetchedEmails, session.access_token)
+      console.log('🔍 DEBUG: Classified emails:', classifiedEmails)
       
       // Generate draft replies
       const emailsWithDrafts = await generateDraftReplies(classifiedEmails, session.access_token)
+      console.log('🔍 DEBUG: Emails with drafts:', emailsWithDrafts)
       
       setEmails(emailsWithDrafts)
       
@@ -64,8 +80,9 @@ export default function DashboardPage() {
       setStats(emailStats)
       
     } catch (err) {
-      console.error('Error loading emails:', err)
+      console.error('❌ DEBUG: Error loading emails:', err)
       setError('Failed to load emails. Please try again.')
+      setDebugInfo(`Error: ${err}`)
     } finally {
       setLoading(false)
     }
@@ -155,9 +172,9 @@ export default function DashboardPage() {
             <div className="flex items-center space-x-4">
               <div className="flex items-center space-x-2">
                 {user?.user_metadata?.avatar_url && (
-                  <img 
-                    src={user.user_metadata.avatar_url} 
-                    alt={user.user_metadata?.full_name || user.email} 
+                  <img
+                    src={user.user_metadata.avatar_url}
+                    alt={user.user_metadata?.full_name || user.email}
                     className="h-8 w-8 rounded-full"
                   />
                 )}
@@ -174,6 +191,19 @@ export default function DashboardPage() {
           </div>
         </div>
       </header>
+
+      {/* Debug Information */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <h3 className="text-sm font-medium text-blue-800 mb-2">🔍 Debug Information</h3>
+          <div className="text-sm text-blue-700 space-y-1">
+            <p><strong>API Base URL:</strong> {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
+            <p><strong>User Email:</strong> {user?.email || 'None'}</p>
+            <p><strong>Access Token:</strong> {session?.access_token ? `${session.access_token.substring(0, 20)}...` : 'None'}</p>
+            <p><strong>Debug Info:</strong> {debugInfo}</p>
+          </div>
+        </div>
+      </div>
 
       {/* Error Display */}
       {error && (
