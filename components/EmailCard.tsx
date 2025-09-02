@@ -22,6 +22,12 @@ const categoryColors = {
   'Other': 'bg-gray-100 text-gray-800',
 }
 
+// Helper function to convert timestamp to Date
+const parseTimestamp = (timestamp: Date | string): Date => {
+  if (timestamp instanceof Date) return timestamp
+  return new Date(timestamp)
+}
+
 export default function EmailCard({ email, isSelected, onClick, onSend, onDiscard }: EmailCardProps) {
   return (
     <div
@@ -41,7 +47,7 @@ export default function EmailCard({ email, isSelected, onClick, onSend, onDiscar
               </span>
             </div>
             <span className="text-xs text-gray-500">
-              {formatDistanceToNow(email.timestamp, { addSuffix: true })}
+              {formatDistanceToNow(parseTimestamp(email.timestamp), { addSuffix: true })}
             </span>
           </div>
           
@@ -52,7 +58,11 @@ export default function EmailCard({ email, isSelected, onClick, onSend, onDiscar
             {email.subject}
           </h3>
           
-          <p className="text-sm text-gray-600 line-clamp-2 mb-2">
+          <p className="text-sm text-gray-600 mb-2 overflow-hidden" style={{
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical'
+          }}>
             {email.snippet}
           </p>
           

@@ -34,12 +34,3 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-
-# OAuth credentials
-config/client_secret*.json
-config/credentials.json
-config/token.json
-
-# Python backend files (keep separate) - but allow start_backend.py
-backend/*.py
-backend/requirements.txt

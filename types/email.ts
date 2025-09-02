@@ -14,13 +14,26 @@ export interface Email {
   sender: string
   snippet: string
   category: EmailCategory
-  draftReply: string
+  draftReply?: string
   isRead: boolean
-  timestamp: Date
+  timestamp: Date | string
 }
 
 export interface EmailStats {
   total: number
   unread: number
   categorized: number
+}
+
+// API response types
+export interface EmailApiResponse {
+  success: boolean
+  emails?: Email[]
+  error?: string
+}
+
+export interface EmailStatsApiResponse {
+  success: boolean
+  stats?: EmailStats
+  error?: string
 }

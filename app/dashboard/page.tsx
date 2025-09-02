@@ -10,6 +10,12 @@ import { Email } from '@/types/email'
 import { fetchEmails, classifyEmails, generateDraftReplies, sendEmailReply, discardEmail, getEmailStats, EmailStats } from '@/lib/api'
 import { GoogleTokens, getGoogleTokensFromSupabaseSession, getGoogleTokensFromUserMetadata, testGoogleToken } from '@/lib/auth'
 
+// Helper function to convert timestamp to Date
+const parseTimestamp = (timestamp: Date | string): Date => {
+  if (timestamp instanceof Date) return timestamp
+  return new Date(timestamp)
+}
+
 export default function DashboardPage() {
   const { user, session, isLoading, signOut } = useSupabaseAuth()
   const router = useRouter()
@@ -75,7 +81,6 @@ export default function DashboardPage() {
       console.log('🔍 DEBUG: User authenticated with Google tokens, loading emails...')
       console.log('🔍 DEBUG: Session:', session)
       console.log('🔍 DEBUG: Google tokens available:', !!googleTokens)
-      console.log('🔍 DEBUG: API Base URL:', process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set')
       loadEmails()
     }
   }, [user, session, googleTokens])
@@ -93,22 +98,35 @@ export default function DashboardPage() {
     
     try {
       console.log('🔍 DEBUG: Starting email fetch...')
-      console.log('🔍 DEBUG: API Base URL:', process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set')
       
       // Fetch unread emails from Gmail
       const fetchedEmails = await fetchEmails(googleTokens)
       console.log('🔍 DEBUG: Fetched emails:', fetchedEmails)
       setDebugInfo(`Fetched ${fetchedEmails.length} emails`)
       
+      // Convert timestamps and ensure proper format
+      const processedEmails = fetchedEmails.map(email => ({
+        ...email,
+        timestamp: parseTimestamp(email.timestamp),
+        draftReply: email.draftReply || ''
+      }))
+      
       // Classify emails using AI
-      const classifiedEmails = await classifyEmails(fetchedEmails, googleTokens)
+      const classifiedEmails = await classifyEmails(processedEmails, googleTokens)
       console.log('🔍 DEBUG: Classified emails:', classifiedEmails)
       
       // Generate draft replies
       const emailsWithDrafts = await generateDraftReplies(classifiedEmails, googleTokens)
       console.log('🔍 DEBUG: Emails with drafts:', emailsWithDrafts)
       
-      setEmails(emailsWithDrafts)
+      // Ensure final emails have proper format
+      const finalEmails = emailsWithDrafts.map(email => ({
+        ...email,
+        timestamp: parseTimestamp(email.timestamp),
+        draftReply: email.draftReply || ''
+      }))
+      
+      setEmails(finalEmails)
       
       // Update stats
       const emailStats = await getEmailStats(googleTokens)
@@ -266,7 +284,6 @@ export default function DashboardPage() {
             <div>
               <h3 className="text-sm font-medium text-blue-800 mb-2">🔍 Debug Information</h3>
               <div className="text-sm text-blue-700 space-y-1">
-                <p><strong>API Base URL:</strong> {process.env.NEXT_PUBLIC_BACKEND_URL || 'Not set'}</p>
                 <p><strong>User Email:</strong> {user?.email || 'None'}</p>
                 <p><strong>Supabase Session:</strong> {session ? 'Active' : 'None'}</p>
                 <p><strong>Provider Token:</strong> {session?.provider_token ? 'Available' : 'Missing'}</p>

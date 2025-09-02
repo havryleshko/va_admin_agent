@@ -1,7 +1,8 @@
 import { Email } from '@/types/email'
 import { GoogleTokens } from './auth'
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000'
+// Use local Next.js API routes instead of external backend
+const API_BASE_URL = ''
 
 export interface EmailStats {
   total: number
