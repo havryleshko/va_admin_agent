@@ -8,7 +8,7 @@ import EmailCard from '@/components/EmailCard'
 import EmailDetail from '@/components/EmailDetail'
 import { Email } from '@/types/email'
 import { fetchEmails, classifyEmails, generateDraftReplies, sendEmailReply, discardEmail, getEmailStats, EmailStats } from '@/lib/api'
-import { GoogleTokens, getGoogleTokensFromSupabaseSession, getGoogleTokensFromUserMetadata } from '@/lib/auth'
+import { GoogleTokens, getGoogleTokensFromSupabaseSession, getGoogleTokensFromUserMetadata, testGoogleToken } from '@/lib/auth'
 
 export default function DashboardPage() {
   const { user, session, isLoading, signOut } = useSupabaseAuth()
@@ -52,8 +52,16 @@ export default function DashboardPage() {
       }
       
       if (tokens) {
-        setGoogleTokens(tokens)
-        setDebugInfo('Google tokens extracted successfully')
+        // Test the token validity before setting it
+        testGoogleToken(tokens.access_token).then(isValid => {
+          if (isValid) {
+            setGoogleTokens(tokens)
+            setDebugInfo('Google tokens extracted and validated successfully')
+          } else {
+            setDebugInfo('Google tokens found but invalid - may need to re-authenticate')
+            console.log('❌ AUTH DEBUG: Token validation failed')
+          }
+        })
       } else {
         setDebugInfo('No Google tokens found - may need to re-authenticate with proper Gmail scopes')
         console.log('❌ AUTH DEBUG: No Google tokens found in any location')
@@ -186,6 +194,26 @@ export default function DashboardPage() {
     }
   }
 
+  const handleTestToken = async () => {
+    if (!googleTokens) {
+      setDebugInfo('No Google tokens available to test')
+      return
+    }
+    
+    try {
+      setDebugInfo('Testing Google token...')
+      const isValid = await testGoogleToken(googleTokens.access_token)
+      if (isValid) {
+        setDebugInfo('✅ Google token is valid! Ready to fetch emails.')
+      } else {
+        setDebugInfo('❌ Google token is invalid. Please re-authenticate.')
+      }
+    } catch (error) {
+      console.error('Token test error:', error)
+      setDebugInfo(`Token test error: ${error}`)
+    }
+  }
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -252,6 +280,14 @@ export default function DashboardPage() {
             >
               Debug Tokens
             </button>
+            {googleTokens && (
+              <button
+                onClick={handleTestToken}
+                className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700 ml-2"
+              >
+                Test Token
+              </button>
+            )}
           </div>
         </div>
       </div>

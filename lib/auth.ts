@@ -44,6 +44,12 @@ export function getGoogleTokensFromSupabaseSession(session: any): GoogleTokens |
       return null
     }
 
+    // Validate token format (Google OAuth tokens are typically long)
+    if (accessToken.length < 50) {
+      console.log('⚠️ AUTH DEBUG: Token seems too short for Google OAuth:', accessToken.length)
+      console.log('⚠️ AUTH DEBUG: Token preview:', accessToken.substring(0, 20) + '...')
+    }
+
     // Create tokens object
     const tokens: GoogleTokens = {
       access_token: accessToken,
@@ -51,6 +57,7 @@ export function getGoogleTokensFromSupabaseSession(session: any): GoogleTokens |
     }
 
     console.log('🔍 AUTH DEBUG: Successfully extracted Google tokens from Supabase session')
+    console.log('🔍 AUTH DEBUG: Token length:', accessToken.length)
     return tokens
   } catch (error) {
     console.error('❌ AUTH DEBUG: Error extracting Google tokens:', error)
@@ -83,6 +90,33 @@ export function getGoogleTokensFromUserMetadata(user: any): GoogleTokens | null 
   } catch (error) {
     console.error('❌ AUTH DEBUG: Error extracting tokens from user metadata:', error)
     return null
+  }
+}
+
+// Test if a token is valid by making a simple Gmail API call
+export async function testGoogleToken(token: string): Promise<boolean> {
+  try {
+    console.log('🔍 AUTH DEBUG: Testing Google token validity...')
+    
+    const response = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      }
+    })
+    
+    const isValid = response.status === 200
+    console.log(`🔍 AUTH DEBUG: Token test result: ${isValid ? 'VALID' : 'INVALID'} (${response.status})`)
+    
+    if (!isValid) {
+      const errorText = await response.text()
+      console.log('🔍 AUTH DEBUG: Token test error:', errorText)
+    }
+    
+    return isValid
+  } catch (error) {
+    console.error('❌ AUTH DEBUG: Error testing token:', error)
+    return false
   }
 }
 

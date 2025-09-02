@@ -148,14 +148,41 @@ def get_email_stats():
         if not google_access_token:
             return jsonify({'error': 'No Google access token provided'}), 401
         
-        # For now, return mock stats (in production, get real stats from Gmail API)
-        stats = {
-            'total': 25,
-            'unread': 8,
-            'categorized': 20
-        }
-        
-        return jsonify({'stats': stats})
+        # Get real stats from Gmail API
+        try:
+            # Fetch a small sample to get count
+            headers = {
+                'Authorization': f'Bearer {google_access_token}',
+                'Content-Type': 'application/json'
+            }
+            
+            gmail_url = 'https://gmail.googleapis.com/gmail/v1/users/me/messages'
+            params = {
+                'q': 'is:unread',
+                'maxResults': 1  # Just get count
+            }
+            
+            response = requests.get(gmail_url, headers=headers, params=params)
+            
+            if response.status_code == 200:
+                gmail_data = response.json()
+                total_messages = gmail_data.get('resultSizeEstimate', 0)
+                
+                stats = {
+                    'total': total_messages,
+                    'unread': total_messages,
+                    'categorized': 0  # Will be updated when emails are classified
+                }
+                
+                print(f"Real Gmail stats: {stats}")
+                return jsonify({'stats': stats})
+            else:
+                print(f"Failed to get Gmail stats: {response.status_code}")
+                return jsonify({'error': 'Failed to fetch Gmail stats'}), 500
+                
+        except Exception as e:
+            print(f"Error getting Gmail stats: {e}")
+            return jsonify({'error': f'Gmail API error: {str(e)}'}), 500
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -264,41 +291,6 @@ def format_emails_for_frontend(emails):
             'timestamp': datetime.now().isoformat()
         })
     return formatted
-
-def get_mock_emails():
-    """Temporary mock emails for testing - replace with real Gmail API calls"""
-    return [
-        {
-            'id': '1',
-            'subject': 'Invoice #12345 - Payment Due',
-            'sender': 'billing@company.com',
-            'snippet': 'Your invoice for services rendered is now due. Please process payment within 30 days.',
-            'category': 'Invoice/Payment',
-            'draftReply': 'Thank you for the invoice. I will process the payment within the next few days.',
-            'isRead': False,
-            'timestamp': datetime.now().isoformat()
-        },
-        {
-            'id': '2',
-            'subject': 'Meeting Request - Q4 Planning',
-            'sender': 'manager@company.com',
-            'snippet': 'Hi, I would like to schedule a meeting to discuss our Q4 planning and strategy.',
-            'category': 'Meeting',
-            'draftReply': 'Sounds great! I\'m available this week. What time works best for you?',
-            'isRead': False,
-            'timestamp': datetime.now().isoformat()
-        },
-        {
-            'id': '3',
-            'subject': 'New Lead - Potential Client',
-            'sender': 'sales@prospect.com',
-            'snippet': 'We are interested in your services and would like to learn more about your offerings.',
-            'category': 'Lead',
-            'draftReply': 'Thank you for your interest! I\'d be happy to schedule a call to discuss how we can help.',
-            'isRead': True,
-            'timestamp': datetime.now().isoformat()
-        }
-    ]
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
