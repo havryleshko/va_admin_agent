@@ -19,14 +19,7 @@ export interface ApiResponse<T> {
 // Fetch unread emails from Gmail
 export async function fetchEmails(googleTokens: GoogleTokens): Promise<Email[]> {
   try {
-    console.log('🔍 API DEBUG: fetchEmails called')
-    console.log('🔍 API DEBUG: API_BASE_URL:', API_BASE_URL)
-    console.log('🔍 API DEBUG: Google tokens available:', !!googleTokens)
-    console.log('🔍 API DEBUG: Token length:', googleTokens.access_token?.length || 0)
-    console.log('🔍 API DEBUG: Token preview:', googleTokens.access_token?.substring(0, 20) + '...')
-    
     const url = `${API_BASE_URL}/api/emails`
-    console.log('🔍 API DEBUG: Making request to:', url)
     
     const response = await fetch(url, {
       method: 'POST',
@@ -39,12 +32,8 @@ export async function fetchEmails(googleTokens: GoogleTokens): Promise<Email[]> 
       })
     })
 
-    console.log('🔍 API DEBUG: Response status:', response.status)
-    console.log('🔍 API DEBUG: Response headers:', Object.fromEntries(response.headers.entries()))
-
     if (!response.ok) {
       const errorText = await response.text()
-      console.log('❌ API DEBUG: Response not ok:', errorText)
       
       // Check if it's a token-related error
       if (response.status === 401) {
@@ -57,13 +46,9 @@ export async function fetchEmails(googleTokens: GoogleTokens): Promise<Email[]> 
     }
 
     const result = await response.json()
-    console.log('🔍 API DEBUG: Response data:', result)
-    
     const emails = result.emails || []
-    console.log('🔍 API DEBUG: Returning emails:', emails)
     return emails
   } catch (error) {
-    console.error('❌ API DEBUG: Error in fetchEmails:', error)
     throw error
   }
 }
@@ -71,8 +56,6 @@ export async function fetchEmails(googleTokens: GoogleTokens): Promise<Email[]> 
 // Classify emails using AI
 export async function classifyEmails(emails: Email[], googleTokens: GoogleTokens): Promise<Email[]> {
   try {
-    console.log('🔍 API DEBUG: classifyEmails called with', emails.length, 'emails')
-    
     const response = await fetch(`${API_BASE_URL}/api/emails/classify`, {
       method: 'POST',
       headers: {
@@ -87,10 +70,8 @@ export async function classifyEmails(emails: Email[], googleTokens: GoogleTokens
     }
 
     const result = await response.json()
-    console.log('🔍 API DEBUG: Classification result:', result)
     return result.emails || emails
   } catch (error) {
-    console.error('❌ API DEBUG: Error in classifyEmails:', error)
     return emails // Return original emails if classification fails
   }
 }
@@ -98,8 +79,6 @@ export async function classifyEmails(emails: Email[], googleTokens: GoogleTokens
 // Generate draft replies
 export async function generateDraftReplies(emails: Email[], googleTokens: GoogleTokens): Promise<Email[]> {
   try {
-    console.log('🔍 API DEBUG: generateDraftReplies called with', emails.length, 'emails')
-    
     const response = await fetch(`${API_BASE_URL}/api/emails/draft-replies`, {
       method: 'POST',
       headers: {
@@ -114,10 +93,8 @@ export async function generateDraftReplies(emails: Email[], googleTokens: Google
     }
 
     const result = await response.json()
-    console.log('🔍 API DEBUG: Draft replies result:', result)
     return result.emails || emails
   } catch (error) {
-    console.error('❌ API DEBUG: Error in generateDraftReplies:', error)
     return emails // Return original emails if draft generation fails
   }
 }
@@ -125,8 +102,6 @@ export async function generateDraftReplies(emails: Email[], googleTokens: Google
 // Send email reply
 export async function sendEmailReply(emailId: string, replyText: string, googleTokens: GoogleTokens): Promise<boolean> {
   try {
-    console.log('🔍 API DEBUG: sendEmailReply called for email:', emailId)
-    
     const response = await fetch(`${API_BASE_URL}/api/emails/send`, {
       method: 'POST',
       headers: {
@@ -144,10 +119,8 @@ export async function sendEmailReply(emailId: string, replyText: string, googleT
     }
 
     const result = await response.json()
-    console.log('🔍 API DEBUG: Send result:', result)
     return result.success || false
   } catch (error) {
-    console.error('❌ API DEBUG: Error in sendEmailReply:', error)
     throw error
   }
 }
@@ -155,8 +128,6 @@ export async function sendEmailReply(emailId: string, replyText: string, googleT
 // Discard email
 export async function discardEmail(emailId: string, googleTokens: GoogleTokens): Promise<boolean> {
   try {
-    console.log('🔍 API DEBUG: discardEmail called for email:', emailId)
-    
     const response = await fetch(`${API_BASE_URL}/api/emails/discard`, {
       method: 'POST',
       headers: {
@@ -171,10 +142,8 @@ export async function discardEmail(emailId: string, googleTokens: GoogleTokens):
     }
 
     const result = await response.json()
-    console.log('🔍 API DEBUG: Discard result:', result)
     return result.success || false
   } catch (error) {
-    console.error('❌ API DEBUG: Error in discardEmail:', error)
     throw error
   }
 }
@@ -182,8 +151,6 @@ export async function discardEmail(emailId: string, googleTokens: GoogleTokens):
 // Get email statistics
 export async function getEmailStats(googleTokens: GoogleTokens): Promise<EmailStats> {
   try {
-    console.log('🔍 API DEBUG: getEmailStats called')
-    
     const response = await fetch(`${API_BASE_URL}/api/emails/stats`, {
       method: 'GET',
       headers: {
@@ -196,10 +163,8 @@ export async function getEmailStats(googleTokens: GoogleTokens): Promise<EmailSt
     }
 
     const result = await response.json()
-    console.log('🔍 API DEBUG: Stats result:', result)
     return result.stats || { total: 0, unread: 0, categorized: 0 }
   } catch (error) {
-    console.error('❌ API DEBUG: Error in getEmailStats:', error)
     return { total: 0, unread: 0, categorized: 0 }
   }
 }

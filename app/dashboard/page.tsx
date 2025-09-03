@@ -42,9 +42,6 @@ export default function DashboardPage() {
   // Extract Google tokens from Supabase session
   useEffect(() => {
     if (session || user) {
-      console.log('🔍 AUTH DEBUG: Supabase session available:', session)
-      console.log('🔍 AUTH DEBUG: User available:', user)
-      
       // Try to get tokens from session first
       let tokens = null
       if (session) {
@@ -53,7 +50,6 @@ export default function DashboardPage() {
       
       // If no tokens from session, try user metadata
       if (!tokens && user) {
-        console.log('🔍 AUTH DEBUG: Trying to get tokens from user metadata...')
         tokens = getGoogleTokensFromUserMetadata(user)
       }
       
@@ -65,12 +61,10 @@ export default function DashboardPage() {
             setDebugInfo('Google tokens extracted and validated successfully')
           } else {
             setDebugInfo('Google tokens found but invalid - may need to re-authenticate')
-            console.log('❌ AUTH DEBUG: Token validation failed')
           }
         })
       } else {
         setDebugInfo('No Google tokens found - may need to re-authenticate with proper Gmail scopes')
-        console.log('❌ AUTH DEBUG: No Google tokens found in any location')
       }
     }
   }, [session, user])
@@ -78,16 +72,12 @@ export default function DashboardPage() {
   // Load real email data when user is authenticated and has Google tokens
   useEffect(() => {
     if (user && session && googleTokens) {
-      console.log('🔍 DEBUG: User authenticated with Google tokens, loading emails...')
-      console.log('🔍 DEBUG: Session:', session)
-      console.log('🔍 DEBUG: Google tokens available:', !!googleTokens)
       loadEmails()
     }
   }, [user, session, googleTokens])
 
   const loadEmails = async () => {
     if (!googleTokens) {
-      console.log('❌ DEBUG: Missing Google tokens')
       setDebugInfo('Missing Google tokens - need to re-authenticate')
       return
     }
@@ -97,11 +87,8 @@ export default function DashboardPage() {
     setDebugInfo('Loading emails...')
     
     try {
-      console.log('🔍 DEBUG: Starting email fetch...')
-      
       // Fetch unread emails from Gmail
       const fetchedEmails = await fetchEmails(googleTokens)
-      console.log('🔍 DEBUG: Fetched emails:', fetchedEmails)
       setDebugInfo(`Fetched ${fetchedEmails.length} emails`)
       
       // Convert timestamps and ensure proper format
@@ -113,11 +100,9 @@ export default function DashboardPage() {
       
       // Classify emails using AI
       const classifiedEmails = await classifyEmails(processedEmails, googleTokens)
-      console.log('🔍 DEBUG: Classified emails:', classifiedEmails)
       
       // Generate draft replies
       const emailsWithDrafts = await generateDraftReplies(classifiedEmails, googleTokens)
-      console.log('🔍 DEBUG: Emails with drafts:', emailsWithDrafts)
       
       // Ensure final emails have proper format
       const finalEmails = emailsWithDrafts.map(email => ({
@@ -133,7 +118,6 @@ export default function DashboardPage() {
       setStats(emailStats)
       
     } catch (err) {
-      console.error('❌ DEBUG: Error loading emails:', err)
       setError('Failed to load emails. Please try again.')
       setDebugInfo(`Error: ${err}`)
     } finally {
@@ -204,10 +188,8 @@ export default function DashboardPage() {
     try {
       const response = await fetch('/api/debug-tokens')
       const data = await response.json()
-      console.log('🔍 DEBUG TOKENS:', data)
       setDebugInfo(`Debug info logged to console. Check browser console for details.`)
     } catch (error) {
-      console.error('Debug error:', error)
       setDebugInfo(`Debug error: ${error}`)
     }
   }

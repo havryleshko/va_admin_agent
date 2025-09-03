@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Mock email sending - in production this would use Gmail API
-    console.log(`Sending reply to email ${emailId}: ${replyText}`)
     
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 1000))

@@ -14,8 +14,6 @@ export default function SupabaseLoginForm() {
     setError(null)
     
     try {
-      console.log('🔍 AUTH DEBUG: Starting Supabase Google OAuth flow...')
-      
       // Use Supabase OAuth with proper scopes for Gmail
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -30,17 +28,13 @@ export default function SupabaseLoginForm() {
       })
 
       if (error) {
-        console.error('❌ AUTH DEBUG: Supabase OAuth error:', error)
         setError(error.message)
         return
       }
-
-      console.log('🔍 AUTH DEBUG: OAuth flow initiated:', data)
       
       // The redirect will happen automatically
       
     } catch (err) {
-      console.error('❌ AUTH DEBUG: Unexpected error:', err)
       setError('An unexpected error occurred. Please try again.')
     } finally {
       setIsLoading(false)

@@ -20,7 +20,6 @@ export async function POST(request: NextRequest) {
     }
 
     // Mock email discarding - in production this would use Gmail API
-    console.log(`Discarding email ${emailId}`)
     
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500))
